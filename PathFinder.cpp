@@ -33,10 +33,10 @@ PathFinder::~PathFinder()
 {
     worldPointer = nullptr;
     pathFinderInstance = nullptr;
-    delete (TopRight); //ruft den konstruktor auf
-    delete (BottomRight); //ruft den konstruktor auf
-    delete (BottomLeft); //ruft den konstruktor auf
-    delete (TopLeft); //ruft den konstruktor auf
+    delete (TopRight); 
+    delete (BottomRight); 
+    delete (BottomLeft); 
+    delete (TopLeft); 
 }
 
 PathFinder* PathFinder::pathFinderInstance = nullptr;
