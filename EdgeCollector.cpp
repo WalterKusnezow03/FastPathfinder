@@ -93,7 +93,7 @@ void EdgeCollector::findAllOfType(AActor &a , std::list<T*> & items)
 			//try find other aactors
 			AActor *a1 = Cast<AActor>(array[i]);
 			if(a1 != nullptr){
-				findAllOfType(*a1, items);
+				findAllOfType<T>(*a1, items);
 			}
 		}
 	}
@@ -134,7 +134,7 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
                 
                 //new method gets all children
                 std::list<UStaticMeshComponent*> list;
-                findAllOfType(*Actor, list);
+                findAllOfType<UStaticMeshComponent>(*Actor, list);
                 for(UStaticMeshComponent *component : list){
                     getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
                 }
@@ -185,7 +185,7 @@ void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector
 
         //new method gets all children not just the first layer
         std::list<UStaticMeshComponent*> list;
-        findAllOfType(*actor, list);
+        findAllOfType<UStaticMeshComponent>(*actor, list);
         for(UStaticMeshComponent *component : list){
             getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
         }
