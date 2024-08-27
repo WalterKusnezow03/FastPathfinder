@@ -68,6 +68,7 @@ bool EdgeCollector::isExcludedType(AActor *actor){
         if(e != nullptr){
             return true;
         }
+        return false;
     }
     return true;
 }
