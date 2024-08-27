@@ -33,6 +33,17 @@ EdgeCollector::~EdgeCollector()
 }
 
 
+//inner class constructor
+EdgeCollector::edgeData::edgeData(FVector bottomIn, FVector topIn){
+    top = topIn;
+    bottom = bottomIn;
+}
+
+//detsructor of inner class
+EdgeCollector::edgeData::~edgeData(){
+}
+
+
 /// @brief returns the already read edges
 /// @return edge vector 
 std::vector<FVector>& EdgeCollector::getReadEdges(){
@@ -40,6 +51,52 @@ std::vector<FVector>& EdgeCollector::getReadEdges(){
 }
 
 
+
+
+// --- methods ---
+
+/// @brief will return whether a actor is to be edges collected from or not
+/// @param actor actor pointer in, must not be nullptr
+/// @return true false
+bool EdgeCollector::isExcludedType(AActor *actor){
+    if(actor != nullptr){
+        IDamageinterface *i = Cast<IDamageinterface>(actor);
+        if(i != nullptr){
+            return true;
+        }
+        AEntityScript *e = Cast<AEntityScript>(actor);
+        if(e != nullptr){
+            return true;
+        }
+    }
+    return true;
+}
+
+
+/// @brief finds all UActorComponents from a given actor
+/// @tparam T UActorComponents or derived, specified by the passed list
+/// @param a actor to get from
+/// @param items container to save in
+template <typename T>
+void EdgeCollector::findAllOfType(AActor &a , std::list<T*> & items)
+{
+	//upper type bound must be set inside here if the class is not generic!
+	static_assert(std::is_base_of<UActorComponent, T>::value, "must be UActorComponent component");
+
+	TArray<T *> array;
+	a.template GetComponents<T>(array); //only provided by aactor
+	if(array.Num() > 0){
+		for (int i = 0; i < array.Num(); i++){
+			items.push_back(array[i]);
+
+			//try find other aactors
+			AActor *a1 = Cast<AActor>(array[i]);
+			if(a1 != nullptr){
+				findAllOfType(*a1, items);
+			}
+		}
+	}
+}
 
 
 
@@ -73,6 +130,17 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
             //exclude enteties
             IDamageinterface *damageInterface = Cast<IDamageinterface>(Actor);
             if(damageInterface == nullptr){
+                
+                //new method gets all children
+                std::list<UStaticMeshComponent*> list;
+                findAllOfType(*Actor, list);
+                for(UStaticMeshComponent *component : list){
+                    getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
+                }
+
+
+                //old method will ony get first children
+                /*
                 // Iterate over all components of the actor
                 TArray<UActorComponent*> array;
                 Actor->GetComponents(array);
@@ -85,7 +153,7 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
                     {
                         getEdgesFromSingleMeshComponent(MeshComponent, *edgeDataEdges);
                     }
-                }
+                }*/
             }
         }
 
@@ -110,6 +178,18 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
 //data will get append to array
 void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector){
     if(actor){
+        
+        //container to save in
+        std::vector<edgeData> vectorEdges;
+
+        //new method gets all children not just the first layer
+        std::list<UStaticMeshComponent*> list;
+        findAllOfType(*actor, list);
+        for(UStaticMeshComponent *component : list){
+            getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
+        }
+
+        /*
         // Iterate over all components of the actor
         TArray<UActorComponent*> array;
         actor->GetComponents(array);
@@ -124,7 +204,7 @@ void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector
             {
                 getEdgesFromSingleMeshComponent(MeshComponent, vectorEdges); //todo: übergabe des arrays?
             }
-        }
+        }*/
 
         
 
@@ -227,6 +307,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
                     extended = false;
 
                     edgeData &prev = currentEdges.back(); //reference the back
+
                     FVector lower = A.Z < B.Z ? A : B;
                     FVector higher = A.Z > B.Z ? A : B;
                     if (FVector::Dist(prev.top, lower) <= 10)
@@ -277,19 +358,22 @@ void EdgeCollector::getEdgesFromSingleMesh(
 }
 
 
-//checks if an edge is vertical
+/// @brief checks if an given egde (from A to B) is vertical
+/// @param A start
+/// @param B end
+/// @return is nearly vertical compared to Z axis / up direction
 bool EdgeCollector::isVertical(FVector A, FVector B){
 
-    FVector connect = B - A;
+    FVector connect = B - A; //AB = B - A
     if(A.Z > B.Z){
         connect = A - B;
     }
 
-    FVector connectNormal = connect.GetSafeNormal(); // AB = B - A
+    FVector connectNormal = connect.GetSafeNormal(); //einheitsvektor / normalisieren 
 
-    float skalarProduktUp = std::abs(connectNormal.Z);
+    float skalarProduktUp = std::abs(connectNormal.Z); //Up component
 
-    return skalarProduktUp > 0.7f; //edge of interest
+    return skalarProduktUp > 0.7f; //edge of interest wenn er weit genug nach oben zeigt.
 }
 
 
@@ -304,6 +388,7 @@ void EdgeCollector::ComputeConvexHull(std::vector<edgeData> &points) { //passed 
     }
 
     // Sort points to calculate the lower hull
+    //Z is up and ignored here.
     std::sort(points.begin(), points.end(), [](const edgeData& a, const edgeData& b) {
         if (a.top.X == b.top.X) {
             return a.top.Y < b.top.Y;
@@ -327,9 +412,9 @@ void EdgeCollector::ComputeConvexHull(std::vector<edgeData> &points) { //passed 
             convexHull.size() > lowerHullCount && 
             !IsClockwise(convexHull[convexHull.size() - 2], convexHull.back(), point)
         ) {
-            convexHull.pop_back();
+            convexHull.pop_back();//den geprüften punkt poppen
         }
-        convexHull.push_back(point);
+        convexHull.push_back(point); //neuen punkt pushen
     }
 
     // Remove the last point which might be duplicated
@@ -357,11 +442,16 @@ void EdgeCollector::ComputeConvexHull(std::vector<edgeData> &points) { //passed 
     //convexHull;
 }
 
-
+/// @brief checks if the point is clockwise rotated for the graham scan
+/// @param a 
+/// @param b 
+/// @param c 
+/// @return 
 bool EdgeCollector::IsClockwise(const edgeData& a, const edgeData& b, const edgeData& c) {
     return (b.top.X - a.top.X) * (c.top.Y - a.top.Y) - (b.top.Y - a.top.Y) * (c.top.Y - a.top.Y) < 0;
-}
 
+    // < 0 means, kolliniear vectors are kept and ignored.
+}
 
 
 
@@ -395,16 +485,7 @@ void EdgeCollector::showLine(FVector e, FVector g){
 
 
 
-//inner class constructor
-EdgeCollector::edgeData::edgeData(FVector bottomIn, FVector topIn){
-    top = topIn;
-    bottom = bottomIn;
-}
 
-//detsructor of inner class
-EdgeCollector::edgeData::~edgeData(){
-
-}
 
 
 
@@ -447,6 +528,9 @@ void EdgeCollector::collectRaycasts(std::vector<edgeData> &edges, UWorld *world)
     }
 }
 
+/// @brief gets the hitpoint of an edge in the world ground (nesecarry if objects are overlapping)
+/// @param edge edge to check
+/// @param world world to check in 
 void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
     if(world){
         FVector Start = edge.top;
@@ -481,4 +565,38 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
         }
     }
     //return nullptr;
+}
+
+
+
+
+
+
+
+
+
+void EdgeCollector::clean(std::vector<edgeData> &vector){
+    int a = 1;
+    while(a > 0 && a < vector.size()){
+        if(checkExtension(vector.at(a - 1), vector.at(a))){
+            vector.erase(vector.begin() + a - 1);
+        }
+    }
+}
+
+bool EdgeCollector::checkExtension(edgeData &p, edgeData &update){
+    
+    FVector lower = p.bottom.Z < update.bottom.Z ? p.bottom : update.bottom;
+    FVector higher = p.top.Z > update.top.Z ? p.top : update.top;
+
+    FVector xyConnect = lower - higher;
+    xyConnect.Z = 0;
+    if(FVector::Dist(FVector(0,0,0), xyConnect) <= 100){
+        if(isVertical(lower, higher)){
+            update.bottom = lower;
+            update.top = higher;
+            return true;
+        }
+    }
+    return false;
 }

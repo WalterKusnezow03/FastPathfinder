@@ -64,4 +64,14 @@ private:
 	void collectRaycast(edgeData &edge, UWorld *world);
 
 	std::vector<edgeData> *edgeDataEdges;
+
+
+	bool isExcludedType(AActor *actor);
+
+	template <typename T>
+	void findAllOfType(AActor &a, std::list<T *> &items);
+
+	//testing needed - not known if nesecarry
+	void clean(std::vector<edgeData> &vector);
+	bool checkExtension(edgeData &p, edgeData &update);
 };
