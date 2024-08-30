@@ -340,7 +340,10 @@ std::vector<FVector> PathFinder::findPath(
             }
 
             //show opened nodes: debugging
-            showPos(current->pos, FColor::Blue);
+            if(debugDrawNodes){
+                showPos(current->pos, FColor::Blue);
+            }
+            //
 
             current->close();
             for (int i = 0; i < subgraph.size(); i++)

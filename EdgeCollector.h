@@ -25,9 +25,8 @@ private:
 
 			FVector top;
 			FVector bottom;
-
-			
 	};
+
 public:
 	std::vector<FVector>& getAllEdges(UWorld *World, float minHeight);
 	std::vector<FVector> &getReadEdges();
@@ -37,9 +36,12 @@ public:
 private:
 	float edgeMinHeight;
 
-	std::vector<FVector> *readEdges;
+	//std::vector<FVector> *readEdges;
+	//std::vector<edgeData> *edgeDataEdges;
+	std::vector<FVector> readEdges;
+	std::vector<edgeData> edgeDataEdges;
 
-	
+
 	void getEdgesFromSingleMesh(
 		UStaticMesh *StaticMesh, 
 		FVector debugPos, 
@@ -63,7 +65,7 @@ private:
 	void collectRaycasts(std::vector<edgeData> &edges, UWorld *world);
 	void collectRaycast(edgeData &edge, UWorld *world);
 
-	std::vector<edgeData> *edgeDataEdges;
+	
 
 
 	bool isExcludedType(AActor *actor);
@@ -73,5 +75,12 @@ private:
 
 	//testing needed - not known if nesecarry
 	void clean(std::vector<edgeData> &vector);
-	bool checkExtension(edgeData &p, edgeData &update);
+	bool checkZExtension(edgeData &p, edgeData &update);
+
+
+
+	//clean up in xy pane, not nesecarry, unclear if will be kept
+	void CleanUpParalellEdges(std::vector<edgeData> &vector);
+	bool xyExtension(FVector &a, FVector &b, FVector &c);
+	float xyDotProduct(FVector &A, FVector &B);
 };

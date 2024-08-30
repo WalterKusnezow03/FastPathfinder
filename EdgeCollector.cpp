@@ -17,26 +17,33 @@
 
 EdgeCollector::EdgeCollector()
 {
-    readEdges = new std::vector<FVector>();
-    edgeDataEdges = new std::vector<edgeData>();
+    //readEdges = new std::vector<FVector>();
+    //edgeDataEdges = new std::vector<edgeData>();
     worldIn = nullptr;
 }
 
 EdgeCollector::~EdgeCollector()
 {
+    /*
     if(readEdges != nullptr){
         delete (readEdges);
     }
+    
     if(edgeDataEdges != nullptr){
         delete (edgeDataEdges);
-    }
+    }*/
 }
 
 
 //inner class constructor
 EdgeCollector::edgeData::edgeData(FVector bottomIn, FVector topIn){
-    top = topIn;
-    bottom = bottomIn;
+    if(topIn.Z < bottomIn.Z){
+        top = bottomIn;
+        bottom = topIn;
+    }else{
+        top = topIn;
+        bottom = bottomIn;
+    }
 }
 
 //detsructor of inner class
@@ -47,7 +54,7 @@ EdgeCollector::edgeData::~edgeData(){
 /// @brief returns the already read edges
 /// @return edge vector 
 std::vector<FVector>& EdgeCollector::getReadEdges(){
-    return *readEdges;
+    return readEdges;
 }
 
 
@@ -89,7 +96,7 @@ void EdgeCollector::findAllOfType(AActor &a , std::list<T*> & items)
     a.template GetComponents<UChildActorComponent>(actors);
     if(actors.Num() > 0){
         for (int i = 0; i < actors.Num(); i++){
-            AActor *a1 = actors[i]->GetChildActor();
+            AActor *a1 = actors[i]->GetChildActor(); //gets the aactor of an child actor
             if (a1)
             {
                 findAllOfType<T>(*a1, items);
@@ -123,7 +130,7 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
     if (!World)
     {
         UE_LOG(LogTemp, Warning, TEXT("Invalid World context."));
-        return *readEdges;
+        return readEdges;
     }
 
     // Iterate over all actors in the world
@@ -144,7 +151,7 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
                 std::list<UStaticMeshComponent*> list;
                 findAllOfType<UStaticMeshComponent>(*Actor, list);
                 for(UStaticMeshComponent *component : list){
-                    getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
+                    getEdgesFromSingleMeshComponent(component, edgeDataEdges);
                 }
 
 
@@ -173,13 +180,13 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
 
     
     //copy edges bottom
-    for (int i = 0; i < edgeDataEdges->size(); i++){
+    for (int i = 0; i < edgeDataEdges.size(); i++){
         //FVector t = edgeDataEdges->at(i).bottom + (edgeDataEdges->at(i).top - edgeDataEdges->at(i).bottom) * 0.1f;
-        readEdges->push_back(edgeDataEdges->at(i).bottom);
+        readEdges.push_back(edgeDataEdges.at(i).bottom);
         //readEdges->push_back(t);
     }
 
-    return *readEdges; //dereference and return
+    return readEdges; //dereference and return
 }
 
 
@@ -195,28 +202,11 @@ void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector
         std::list<UStaticMeshComponent*> list;
         findAllOfType<UStaticMeshComponent>(*actor, list);
         for(UStaticMeshComponent *component : list){
-            getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
+            //getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
+            getEdgesFromSingleMeshComponent(component, edgeDataEdges);
         }
 
-        /*
-        // Iterate over all components of the actor
-        TArray<UActorComponent*> array;
-        actor->GetComponents(array);
-
-        std::vector<edgeData> vectorEdges;
-
-        //childs
-        for (UActorComponent* component : array)
-        {
-            //if component is a mesh component
-            if (UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(component))
-            {
-                getEdgesFromSingleMeshComponent(MeshComponent, vectorEdges); //todo: übergabe des arrays?
-            }
-        }*/
-
-        
-
+    
         
         //copy edges bottom
         for (int i = 0; i < vectorEdges.size(); i++){
@@ -351,8 +341,8 @@ void EdgeCollector::getEdgesFromSingleMesh(
         }
     }
 
-    //pass by reference
     ComputeConvexHull(currentEdges);
+    CleanUpParalellEdges(currentEdges);
 
 
     //caluclate raycast hits and apply to all edges aligning them properly
@@ -561,6 +551,7 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
             //to prevent false edges
             float completeDistance = FVector::Dist(Start, edge.top);
             float hitDistanceFromTop = FVector::Dist(Start, HitResult.ImpactPoint);
+            //20% from top müssen kleiner sein damit der punkt darunter liegt
             if(completeDistance * 0.2f < hitDistanceFromTop){
                 //min 20% distance to remove false hits
 
@@ -587,13 +578,13 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
 void EdgeCollector::clean(std::vector<edgeData> &vector){
     int a = 1;
     while(a > 0 && a < vector.size()){
-        if(checkExtension(vector.at(a - 1), vector.at(a))){
+        if(checkZExtension(vector.at(a - 1), vector.at(a))){
             vector.erase(vector.begin() + a - 1);
         }
     }
 }
 
-bool EdgeCollector::checkExtension(edgeData &p, edgeData &update){
+bool EdgeCollector::checkZExtension(edgeData &p, edgeData &update){
     
     FVector lower = p.bottom.Z < update.bottom.Z ? p.bottom : update.bottom;
     FVector higher = p.top.Z > update.top.Z ? p.top : update.top;
@@ -608,4 +599,39 @@ bool EdgeCollector::checkExtension(edgeData &p, edgeData &update){
         }
     }
     return false;
+}
+
+
+
+
+void EdgeCollector::CleanUpParalellEdges(std::vector<edgeData> &currentEdges){
+
+    int size = currentEdges.size() - 1;
+    int i = 1;
+    while(i < size){
+        FVector &a = currentEdges.at(i - 1).top;
+        FVector &b = currentEdges.at(i - 1).top;
+        FVector &c = currentEdges.at(i - 1).top;
+
+        if (xyExtension(a,b,c))
+        {
+            currentEdges.erase(currentEdges.begin() + i);
+        }
+
+        i++;
+        size = currentEdges.size() - 1;
+    }
+}
+
+bool EdgeCollector::xyExtension(FVector &a, FVector &b, FVector &c){
+    FVector ab = b - a;
+    FVector bc = c - b;
+    //if ab and bc are almost paralell, they almost creating one line, making b redundant in a path over a b and c
+    if(xyDotProduct(ab,bc) >= 0.9f){
+        return true;
+    }
+    return false;
+}
+float EdgeCollector::xyDotProduct(FVector &A, FVector &B){
+    return (A.X * B.X) + (A.Y + B.Y);
 }

@@ -10,7 +10,8 @@
 class P2_API PathFinder
 {
 public:
-	
+	static const bool debugDrawNodes = false; //false
+
 	~PathFinder();
 
 	static PathFinder *instance(UWorld *worldIn);
