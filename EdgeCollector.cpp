@@ -603,7 +603,8 @@ bool EdgeCollector::checkZExtension(edgeData &p, edgeData &update){
 
 
 
-
+/// @brief keep in mind, the edges MUST be sorted to a convex hull before!
+/// @param currentEdges to simplyfy
 void EdgeCollector::CleanUpParalellEdges(std::vector<edgeData> &currentEdges){
 
     int size = currentEdges.size() - 1;
