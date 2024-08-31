@@ -575,33 +575,6 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
 
 
 
-void EdgeCollector::clean(std::vector<edgeData> &vector){
-    int a = 1;
-    while(a > 0 && a < vector.size()){
-        if(checkZExtension(vector.at(a - 1), vector.at(a))){
-            vector.erase(vector.begin() + a - 1);
-        }
-    }
-}
-
-bool EdgeCollector::checkZExtension(edgeData &p, edgeData &update){
-    
-    FVector lower = p.bottom.Z < update.bottom.Z ? p.bottom : update.bottom;
-    FVector higher = p.top.Z > update.top.Z ? p.top : update.top;
-
-    FVector xyConnect = lower - higher;
-    xyConnect.Z = 0;
-    if(FVector::Dist(FVector(0,0,0), xyConnect) <= 100){
-        if(isVertical(lower, higher)){
-            update.bottom = lower;
-            update.top = higher;
-            return true;
-        }
-    }
-    return false;
-}
-
-
 
 /// @brief keep in mind, the edges MUST be sorted to a convex hull before!
 /// @param currentEdges to simplyfy
@@ -635,4 +608,44 @@ bool EdgeCollector::xyExtension(FVector &a, FVector &b, FVector &c){
 }
 float EdgeCollector::xyDotProduct(FVector &A, FVector &B){
     return (A.X * B.X) + (A.Y + B.Y);
+}
+
+
+
+
+
+
+/// @brief is not tested
+/// @param vector 
+void EdgeCollector::clean(std::vector<edgeData> &vector){
+    int a = 1;
+    int size = vector.size();
+    while (a > 0 && a < size)
+    {
+        if(checkZExtension(vector.at(a - 1), vector.at(a))){
+            vector.erase(vector.begin() + a - 1);
+            size = vector.size();
+        }
+        a++;
+    }
+}
+/// @brief is also not tested
+/// @param p 
+/// @param update 
+/// @return 
+bool EdgeCollector::checkZExtension(edgeData &p, edgeData &update){
+    
+    FVector lower = p.bottom.Z < update.bottom.Z ? p.bottom : update.bottom;
+    FVector higher = p.top.Z > update.top.Z ? p.top : update.top;
+
+    FVector xyConnect = lower - higher;
+    xyConnect.Z = 0;
+    if(FVector::Dist(FVector(0,0,0), xyConnect) <= 100){
+        if(isVertical(lower, higher)){
+            update.bottom = lower;
+            update.top = higher;
+            return true;
+        }
+    }
+    return false;
 }
