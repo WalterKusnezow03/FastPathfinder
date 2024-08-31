@@ -625,8 +625,8 @@ void EdgeCollector::CleanUpParalellEdges(std::vector<edgeData> &currentEdges){
 }
 
 bool EdgeCollector::xyExtension(FVector &a, FVector &b, FVector &c){
-    FVector ab = b - a;
-    FVector bc = c - b;
+    FVector ab = (b - a).GetSafeNormal();
+    FVector bc = (c - b).GetSafeNormal();
     //if ab and bc are almost paralell, they almost creating one line, making b redundant in a path over a b and c
     if(xyDotProduct(ab,bc) >= 0.9f){
         return true;
