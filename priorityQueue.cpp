@@ -77,6 +77,10 @@ void priorityQueue::bubbleUpfrom(int index){
 PathFinder::Node *priorityQueue::popLowestFx(){
     if(hasNodes()){
         PathFinder::Node *front = nodes.front();
+        //remove from index map
+        if(front != nullptr){
+            indexMap.erase(front);
+        }
         downheap();
         return front;
     }

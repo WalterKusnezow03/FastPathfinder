@@ -376,11 +376,12 @@ std::vector<FVector> PathFinder::findPath(
         }
     }
 
+    /*
     if (GEngine)
     {
         FString string = FString::Printf(TEXT("out of nodes"));
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, string);
-    }
+    }*/
 
     return std::vector<FVector>();
 }
