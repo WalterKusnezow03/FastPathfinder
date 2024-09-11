@@ -5,7 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "p2/Damageinterface.h"
+#include "p2/interfaces/Damageinterface.h"
 #include "DrawDebugHelpers.h"
 #include <cmath>
 #include <algorithm>
@@ -202,6 +202,9 @@ std::vector<PathFinder::Node *> PathFinder::getSubGraph(FVector a, FVector b){
     std::vector<PathFinder::Node *> nodes;
     std::vector<PathFinder::Node *> asked;
 
+    //why is this just iterating over all quadrants:
+    //the "askForArea(a,b)" method is clamping the coordinates by it self
+    //to the correct values to properly get all nodes in the correct area.
     TArray<PathFinder::Quadrant*> array = {TopLeft, BottomLeft, TopRight, BottomRight};
     
     
@@ -210,13 +213,6 @@ std::vector<PathFinder::Node *> PathFinder::getSubGraph(FVector a, FVector b){
         if(array[i] != nullptr){
 
             asked = array[i]->askForArea(a, b);
-
-            FString string = FString::Printf(TEXT("asked num size %d"), asked.size());
-            if(GEngine){
-                //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, string);
-            }
-
-
 
             nodes.insert(nodes.end(), asked.begin(), asked.end());
         }
@@ -353,7 +349,10 @@ std::vector<FVector> PathFinder::findPath(
                     //bool wasClosed = n->closedFlag;
                     if(!n->isClosed()){
                         
-                        //kante aufstellen wenn sichtverbindung besteht. Dynamischer a stern / modifiziert
+                        //create edge at runtime: 
+                        //all edges are rechecked during runtime 
+                        //because otherwise it could not operate on subgraphs
+                        //but is nesecarry to eliminate many nodes at once
                         if(canSee(current, n)){
                             
 
@@ -511,7 +510,7 @@ std::vector<FVector> PathFinder::constructPath(PathFinder::Node *end){
 //QUADRANT METHODS
 
 void PathFinder::Quadrant::add(FVector n){
-    //std::abs(
+    //std::abs for flipping negatives obviosuly
     int x = std::abs(n.X / CHUNKSIZE); //create new chunks?
     int y = std::abs(n.Y / CHUNKSIZE);
 
@@ -560,6 +559,7 @@ std::vector<PathFinder::Node*> PathFinder::Quadrant::nodesEnClosedBy(
 ){
     std::vector<PathFinder::Node *> nodes;
 
+    //abs for flipping neg values for the quadrants
     int x1 = std::abs(xA / CHUNKSIZE); //implicit conversion is allowed
     int y1 = std::abs(yA / CHUNKSIZE);
     int x2 = std::abs(xB / CHUNKSIZE); //implicit conversion is allowed
@@ -610,7 +610,7 @@ std::vector<PathFinder::Node*> PathFinder::Quadrant::askForArea(FVector a, FVect
 
     if(xSample == 1 && ySample == 1){
         // Bottom-left quadrant
-        lowerX = std::clamp(lowerX, 0.0f, inf);
+        lowerX = std::clamp(lowerX, 0.0f, inf); //(val, lowerclamp, higherclamp)
         lowerY = std::clamp(lowerY, 0.0f, inf);
         return nodesEnClosedBy(lowerX, lowerY, higherX, higherY);
     }

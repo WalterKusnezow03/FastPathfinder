@@ -6,7 +6,7 @@
 #include "Engine/StaticMesh.h"
 #include "StaticMeshResources.h" 
 #include "GameFramework/Actor.h"
-#include "p2/Damageinterface.h"
+#include "p2/interfaces/Damageinterface.h"
 #include "Engine/StaticMeshActor.h"
 #include "MeshDescription.h"
 #include "Kismet/GameplayStatics.h"
@@ -342,7 +342,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
     }
 
     ComputeConvexHull(currentEdges);
-    CleanUpParalellEdges(currentEdges);
+    CleanUpParalellEdges(currentEdges); //convex hull needed!
 
 
     //caluclate raycast hits and apply to all edges aligning them properly
@@ -551,12 +551,12 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
             //to prevent false edges
             float completeDistance = FVector::Dist(Start, edge.top);
             float hitDistanceFromTop = FVector::Dist(Start, HitResult.ImpactPoint);
-            //20% from top müssen kleiner sein damit der punkt darunter liegt
-            if(completeDistance * 0.2f < hitDistanceFromTop){
+            //50% from top müssen kleiner sein damit der punkt darunter liegt
+            if(completeDistance * 0.5f < hitDistanceFromTop){
                 //min 20% distance to remove false hits
 
                 FVector hitPos = HitResult.ImpactPoint;
-                hitPos.Z += 70;
+                hitPos.Z += GROUND_OFFSET; //offset fix above ground
                 edge.bottom = hitPos;
             }
 

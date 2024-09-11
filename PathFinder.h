@@ -5,7 +5,9 @@
 #include "CoreMinimal.h"
 
 /**
- * 
+ * a modified a* version which operates on subgraphs and rechecks edges on runtime
+ * the edges are build and checked on runtime because we want to operate on subgraphs
+ * efficently. Also it adds supports for dynamic actors like vehicles blocking paths temporarily
  */
 class P2_API PathFinder
 {
