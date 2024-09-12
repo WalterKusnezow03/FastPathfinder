@@ -12,7 +12,7 @@
 class P2_API PathFinder
 {
 public:
-	static const bool debugDrawNodes = false; //false
+	static const bool debugDrawNodes = true; //false
 
 	~PathFinder();
 

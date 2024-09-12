@@ -122,11 +122,10 @@ void PathFinder::showPos(FVector e){
 }
 
 void PathFinder::showPos(FVector e, FColor c){
-    if(worldPointer){
+    if(worldPointer && debugDrawNodes){
         FVector End = e + FVector(0, 0, 10000);
-        DrawDebugLine(worldPointer, e, End, c, true, 10.0f, 100, 5.0f);
+        DebugHelper::showLineBetween(worldPointer, e, End, c);
     }
-   
 }
 
 
@@ -138,7 +137,7 @@ void PathFinder::addNewNodeVector(std::vector<FVector>& vec){
         addNewNode(vec.at(i));
     }
 
-    debugCountNodes();
+    //debugCountNodes();
 }
 
 /// @brief adds a single node to the graph
@@ -149,12 +148,13 @@ void PathFinder::addNewNode(FVector a){
         q->add(a);
         
         
-        //debug testing
+        //debug testing for checking if nodes were added, works properly
+        /*
         PathFinder::Node *tryFind = findNode(a);
         if(tryFind != nullptr){
-            //showPos(tryFind->pos);
+            showPos(tryFind->pos, FColor::Purple);
         }
-        
+        */
     }
 }
 
@@ -257,6 +257,10 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
         //showPos(end->pos, FColor::Red);
 
         std::vector<PathFinder::Node *> graph = getSubGraph(a, b);
+        showPos(start->pos, FColor::Blue);
+        showPos(end->pos, FColor::Red);
+        DebugHelper::showLineBetween(worldPointer, start->pos, end->pos, FColor::Yellow);
+
         return findPath(start, end, graph);
     }
 
@@ -337,7 +341,7 @@ std::vector<FVector> PathFinder::findPath(
 
             //show opened nodes: debugging
             if(debugDrawNodes){
-                showPos(current->pos, FColor::Blue);
+                //showPos(current->pos, FColor::Blue);
             }
             //
 
@@ -566,12 +570,12 @@ std::vector<PathFinder::Node*> PathFinder::Quadrant::nodesEnClosedBy(
     int y2 = std::abs(yB / CHUNKSIZE);
 
     int fromX = std::min(x1, x2);
-    int toX = std::min(x1, x2);
+    int toX = std::max(x1, x2);
     //toX = std::min(tg btoX, map.size());
     
 
     int fromY = std::min(y1, y2);
-    int toY = std::min(y1, y2);
+    int toY = std::max(y1, y2);
     //toY = std::min(toY, map.at(0).size());
 
     for(int i = fromX; i <= toX; i++){

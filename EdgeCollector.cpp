@@ -547,18 +547,16 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
 		// If the raycast hit something, log the hit actor's name
 		if (bHit)
 		{
-            //needed here to check if the distance between hit and start is less than 10% of distance
-            //to prevent false edges
-            //float completeDistance = FVector::Dist(Start, edge.top);
-            //float hitDistanceFromTop = FVector::Dist(Start, HitResult.ImpactPoint);
-
+            
+            //distance from top must be greater than bottom from hitpoint
+            //to make the hit point valid
+            //(if you stick your meshes into the ground thats not my issue.)
             float completeDistance = FVector::Dist(edge.bottom, edge.top);
             float hitDistanceFromTop = FVector::Dist(edge.top, HitResult.ImpactPoint);
             float hitDistanceFromBottom = FVector::Dist(edge.bottom, HitResult.ImpactPoint);
             
             //prevent nodes in ground and too far up
             if(hitDistanceFromTop > hitDistanceFromBottom){
-                //min 20% distance to remove false hits
 
                 FVector hitPos = HitResult.ImpactPoint;
                 hitPos.Z += GROUND_OFFSET; //offset fix above ground
