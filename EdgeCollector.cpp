@@ -507,7 +507,7 @@ void EdgeCollector::collectRaycasts(std::vector<edgeData> &edges, UWorld *world)
     centerBottom /= (edges.size());
     center /= (edges.size() * 2);
 
-    //apply offset smallest //PUSHOUT EDGE
+    //apply offset smallest //PUSHOUT EDGE TO NOT COLLIDE WITH ORIGINAL ACTOR
     for (int i = 0; i < edges.size(); i++) {
         FVector top = edges.at(i).top;
         FVector bottom = edges.at(i).bottom;
@@ -549,14 +549,20 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
 		{
             //needed here to check if the distance between hit and start is less than 10% of distance
             //to prevent false edges
-            float completeDistance = FVector::Dist(Start, edge.top);
-            float hitDistanceFromTop = FVector::Dist(Start, HitResult.ImpactPoint);
-            //50% from top müssen kleiner sein damit der punkt darunter liegt
-            if(completeDistance * 0.5f < hitDistanceFromTop){
+            //float completeDistance = FVector::Dist(Start, edge.top);
+            //float hitDistanceFromTop = FVector::Dist(Start, HitResult.ImpactPoint);
+
+            float completeDistance = FVector::Dist(edge.bottom, edge.top);
+            float hitDistanceFromTop = FVector::Dist(edge.top, HitResult.ImpactPoint);
+            float hitDistanceFromBottom = FVector::Dist(edge.bottom, HitResult.ImpactPoint);
+            
+            //prevent nodes in ground and too far up
+            if(hitDistanceFromTop > hitDistanceFromBottom){
                 //min 20% distance to remove false hits
 
                 FVector hitPos = HitResult.ImpactPoint;
                 hitPos.Z += GROUND_OFFSET; //offset fix above ground
+                //at any point use the hitpos
                 edge.bottom = hitPos;
             }
 
