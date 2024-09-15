@@ -51,12 +51,6 @@ EdgeCollector::edgeData::~edgeData(){
 }
 
 
-/// @brief returns the already read edges
-/// @return edge vector 
-std::vector<FVector>& EdgeCollector::getReadEdges(){
-    return readEdges;
-}
-
 
 
 
@@ -119,18 +113,16 @@ void EdgeCollector::findAllOfType(AActor &a , std::list<T*> & items)
 //Function to process static meshes in the world
 //returns a reference to the edges, copy needed because object will destroy them on destruct!
 
-/// @brief will get all edges from the given world.
-/// @param World 
-/// @param minHeight 
-/// @return std::vector<FVector>& a list of nodes for your pathfinding algorythm
-std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
+/// @brief will get all edges from the given world and add it to the nav mesh
+/// @param World world to get from, must not be nullptr
+void EdgeCollector::getAllEdges(UWorld* World)
 {
     worldIn = World;
-    edgeMinHeight = minHeight;
     if (!World)
     {
         UE_LOG(LogTemp, Warning, TEXT("Invalid World context."));
-        return readEdges;
+        return;
+        // return readEdges;
     }
 
     // Iterate over all actors in the world
@@ -151,7 +143,8 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
                 std::list<UStaticMeshComponent*> list;
                 findAllOfType<UStaticMeshComponent>(*Actor, list);
                 for(UStaticMeshComponent *component : list){
-                    getEdgesFromSingleMeshComponent(component, edgeDataEdges);
+                    getEdgesFromSingleMeshComponent(component);
+                    //, edgeDataEdges);
                 }
 
 
@@ -160,11 +153,12 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
 
     }
 
-    
+    /*
     //debug: return empty edges, all is added in deeper state function
     
     
     //copy edges bottom
+    
     for (int i = 0; i < edgeDataEdges.size(); i++){
         //FVector t = edgeDataEdges->at(i).bottom + (edgeDataEdges->at(i).top - edgeDataEdges->at(i).bottom) * 0.1f;
         readEdges.push_back(edgeDataEdges.at(i).bottom);
@@ -172,12 +166,13 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
     }
 
     return readEdges; //dereference and return
+    */
 }
 
 
 //collect adges for an single actor passed per pointer
 //data will get append to array
-void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector){
+void EdgeCollector::getEdgesForActor(AActor* actor){
     if(actor){
         
         //container to save in
@@ -187,16 +182,15 @@ void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector
         std::list<UStaticMeshComponent*> list;
         findAllOfType<UStaticMeshComponent>(*actor, list);
         for(UStaticMeshComponent *component : list){
-            //getEdgesFromSingleMeshComponent(component, *edgeDataEdges);
-            getEdgesFromSingleMeshComponent(component, edgeDataEdges);
+            getEdgesFromSingleMeshComponent(component);//, vectorEdges);
         }
 
     
-        
+        /*
         //copy edges bottom
         for (int i = 0; i < vectorEdges.size(); i++){
             vector.push_back(vectorEdges.at(i).bottom);
-        }
+        }*/
     }
 }
 
@@ -204,8 +198,8 @@ void EdgeCollector::getEdgesForActor(AActor* actor, std::vector<FVector> &vector
 
 // reads static mesh from static mesh component
 void EdgeCollector::getEdgesFromSingleMeshComponent(
-    UStaticMeshComponent* MeshComponent,
-    std::vector<edgeData> &vector
+    UStaticMeshComponent* MeshComponent
+    //,std::vector<edgeData> &vector
 )
 {
     if (MeshComponent && MeshComponent->GetStaticMesh())
@@ -216,8 +210,8 @@ void EdgeCollector::getEdgesFromSingleMeshComponent(
         getEdgesFromSingleMesh(
             MeshComponent->GetStaticMesh(), 
             MeshComponent->GetComponentLocation(),
-            LocalToWorldTransform,
-            vector
+            LocalToWorldTransform
+            //,vector
         );
     }
 
@@ -229,8 +223,8 @@ void EdgeCollector::getEdgesFromSingleMeshComponent(
 void EdgeCollector::getEdgesFromSingleMesh(
     UStaticMesh* StaticMesh, 
     FVector debugPos, 
-    FTransform LocalToWorldTransform,
-    std::vector<edgeData> &vector
+    FTransform LocalToWorldTransform
+    //,std::vector<edgeData> &vector
 ){
     if (!StaticMesh)
     {
@@ -309,18 +303,6 @@ void EdgeCollector::getEdgesFromSingleMesh(
                         currentEdges.push_back(edgeData(B, A)); //hier ein punkt weil lokal ref
                     }
                 }
-
-
-
-                /*
-                //default adding
-                //nach höhe einsortieren
-                if(A.Z < B.Z){
-                    currentEdges.push_back(edgeData(A, B));
-                }else{
-                    currentEdges.push_back(edgeData(B, A)); //hier ein punkt weil lokal ref
-                }*/
-
                 
             }
         }
@@ -337,7 +319,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
 
     // insert(start orig, start appended, end appended);
     //edgeDataEdges->insert(edgeDataEdges->end(), currentEdges.begin(), currentEdges.end());
-    vector.insert(vector.end(), currentEdges.begin(), currentEdges.end());
+    //vector.insert(vector.end(), currentEdges.begin(), currentEdges.end());
 
 
 

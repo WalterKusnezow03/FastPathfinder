@@ -966,9 +966,11 @@ bool PathFinder::Node::hasNeighbors(){
 
 
 /// @brief needs to pass the tangential check before being a node of interest
-/// @param a 
-/// @param b 
-/// @return 
+/// requires both passed nodes to have their very next neighbors and both neighbors being
+/// part of the convex hull of the polygon the nodes / edges were collected from
+/// @param a node a
+/// @param b node b
+/// @return is tangential no intersect or not
 bool PathFinder::passTangentailCheck(Node *a, Node *b){
     if(a != nullptr && b != nullptr)
     {

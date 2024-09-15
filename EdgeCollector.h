@@ -30,10 +30,10 @@ private:
 	};
 
 public:
-	std::vector<FVector>& getAllEdges(UWorld *World, float minHeight);
-	std::vector<FVector> &getReadEdges();
+	//std::vector<FVector>& getAllEdges(UWorld *World);
+	void getAllEdges(UWorld *World);
 
-	void getEdgesForActor(AActor *actor, std::vector<FVector> &vector);
+	void getEdgesForActor(AActor *actor);
 
 	void ComputeConvexHull(std::vector<edgeData> &points);
 
@@ -49,10 +49,13 @@ private:
 	void getEdgesFromSingleMesh(
 		UStaticMesh *StaticMesh, 
 		FVector debugPos, 
-		FTransform LocalToWorldTransform, 
-		std::vector<edgeData> &vector
+		FTransform LocalToWorldTransform
+		//, std::vector<edgeData> &vector
 	);
-	void getEdgesFromSingleMeshComponent(UStaticMeshComponent *MeshComponent, std::vector<edgeData> &vector);
+	void getEdgesFromSingleMeshComponent(
+		UStaticMeshComponent *MeshComponent
+		//,std::vector<edgeData> &vector
+	);
 
 	bool isVertical(FVector A, FVector B);
 
