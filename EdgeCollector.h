@@ -9,7 +9,7 @@
 #include "CoreMinimal.h"
 
 /**
- * 
+ * collects all edges from meshes convex
  */
 class P2_API EdgeCollector
 {
@@ -34,6 +34,8 @@ public:
 	std::vector<FVector> &getReadEdges();
 
 	void getEdgesForActor(AActor *actor, std::vector<FVector> &vector);
+
+	void ComputeConvexHull(std::vector<edgeData> &points);
 
 private:
 	float edgeMinHeight;
@@ -61,7 +63,7 @@ private:
 	void showPos(UWorld *world, FVector e);
 	void showLine(FVector e, FVector g);
 	void showEdges(std::vector<edgeData> &edges, UWorld *world);
-	void ComputeConvexHull(std::vector<edgeData> &points);
+	
 	bool IsClockwise(const edgeData &a, const edgeData &b, const edgeData &c);
 
 	void collectRaycasts(std::vector<edgeData> &edges, UWorld *world);

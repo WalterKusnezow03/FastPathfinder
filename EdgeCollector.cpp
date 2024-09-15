@@ -155,29 +155,14 @@ std::vector<FVector>& EdgeCollector::getAllEdges(UWorld* World, float minHeight)
                 }
 
 
-                //old method will ony get first children
-                /*
-                // Iterate over all components of the actor
-                TArray<UActorComponent*> array;
-                Actor->GetComponents(array);
-
-                //childs
-                for (UActorComponent* component : array)
-                {
-                    //if component is a mesh component
-                    if (UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(component))
-                    {
-                        getEdgesFromSingleMeshComponent(MeshComponent, *edgeDataEdges);
-                    }
-                }*/
             }
         }
 
     }
 
     
+    //debug: return empty edges, all is added in deeper state function
     
-
     
     //copy edges bottom
     for (int i = 0; i < edgeDataEdges.size(); i++){
@@ -342,7 +327,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
     }
 
     ComputeConvexHull(currentEdges);
-    CleanUpParalellEdges(currentEdges); //convex hull needed!
+    //CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
 
 
     //caluclate raycast hits and apply to all edges aligning them properly
@@ -354,6 +339,49 @@ void EdgeCollector::getEdgesFromSingleMesh(
     //edgeDataEdges->insert(edgeDataEdges->end(), currentEdges.begin(), currentEdges.end());
     vector.insert(vector.end(), currentEdges.begin(), currentEdges.end());
 
+
+
+    
+    // since the hull of the nodes is convex, the 2 neighbors for each can be added
+    std::vector<PathFinder::Node *> outNodes;
+    for (int i = 0; i < currentEdges.size(); i++){
+        PathFinder::Node *n = new PathFinder::Node(currentEdges.at(i).bottom);
+        outNodes.push_back(n);
+    }
+
+    //add the konvex neighbors
+    for (int i = 0; i < outNodes.size(); i++){
+        PathFinder::Node *prev = nullptr;
+        PathFinder::Node *next = nullptr;
+
+        if (i == 0){
+            prev = outNodes.at(outNodes.size() - 1);
+        }
+        else{
+            prev = outNodes.at(i - 1);
+        }
+
+
+        if(i == outNodes.size() - 1){
+            next = outNodes.at(0);
+        }
+        else{
+            next = outNodes.at(i + 1);
+        }
+
+        PathFinder::Node *current = outNodes.at(i);
+        current->nA = prev;
+        current->nB = next;
+    }
+
+    //alle sofort in graphen ballern
+    if(PathFinder *f = PathFinder::instance(worldIn)){
+        for (int i = 0; i < outNodes.size(); i++){
+            if(outNodes.at(i) != nullptr){
+                f->addNode(outNodes.at(i));
+            }
+        }
+    }
 }
 
 

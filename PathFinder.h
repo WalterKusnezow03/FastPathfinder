@@ -12,13 +12,19 @@
 class P2_API PathFinder
 {
 public:
-	static const bool debugDrawNodes = true; //false
+	static const bool debugDrawNodes = false; //false
 
 	~PathFinder();
 
 	static PathFinder *instance(UWorld *worldIn);
+	//static void deleteInstance();
+
+	void clear(); //clears ALL NODES
+
+	void addNewNodeVector(std::vector<FVector> &vec, FVector &offset);
 	void addNewNodeVector(std::vector<FVector> &vec);
 	void addNewNode(FVector a);
+
 
 	std::vector<FVector> getPath(FVector a, FVector b);
 
@@ -26,7 +32,7 @@ public:
 		public:
 			static const int noneFx = -1;
 			bool closedFlag;
-			PathFinder::Node *camefrom;
+			PathFinder::Node *camefrom = nullptr;
 			float fx;
 			float gx;
 			FVector pos;
@@ -38,9 +44,21 @@ public:
 			bool isClosed();
 
 			float oldfx;
+
+			PathFinder::Node *nA = nullptr;
+			PathFinder::Node *nB = nullptr;
+
+			bool hasNeighbors();
 	};
 
+	void addNode(PathFinder::Node *node);
+	bool reached(PathFinder::Node *a, PathFinder::Node *b);
+
 private:
+	std::vector<FVector> prevPath;
+
+	bool passTangentailCheck(Node *a, Node *b);
+
 	static constexpr int CHUNKSIZE = 2000; // 1m = 100, 20m = 2000
 	static constexpr int ONE_METER = 70; //distance to keep between nodes
 
@@ -59,10 +77,13 @@ private:
 			Chunk();
 			~Chunk();
 			void add(FVector vec);
-			std::vector<PathFinder::Node*> &getNodes();
+			void add(Node *node);
+			std::vector<PathFinder::Node *> &getNodes();
 			PathFinder::Node *findNode(FVector pos);
 
 			bool hasNode(FVector pos);
+
+			void clear();
 		};
 
 	class Quadrant{
@@ -81,6 +102,9 @@ private:
 			std::vector<PathFinder::Node *> askForArea(FVector a, FVector b);
 
 			void add(FVector n);
+			void add(Node *node);
+
+			void clear();
 	};
 
 	class Quadrant *TopRight;
@@ -114,5 +138,7 @@ private:
 	);
 
 	bool canSee(PathFinder::Node *A, PathFinder::Node *B);
-	bool canSee(FVector a, FVector b);
+	bool canSee(FVector &a, FVector &b);
+
+	bool isCloseAndTooVertical(Node *a, Node *b);
 };
