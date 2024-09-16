@@ -58,7 +58,7 @@ EdgeCollector::edgeData::~edgeData(){
 
 /// @brief will return whether a actor is to be edges collected from or not
 /// @param actor actor pointer in, must not be nullptr
-/// @return true false
+/// @return true or false
 bool EdgeCollector::isExcludedType(AActor *actor){
     if(actor != nullptr){
         IDamageinterface *i = Cast<IDamageinterface>(actor);
@@ -67,6 +67,10 @@ bool EdgeCollector::isExcludedType(AActor *actor){
         }
         AEntityScript *e = Cast<AEntityScript>(actor);
         if(e != nullptr){
+            return true;
+        }
+        AcarriedItem *carried = Cast<AcarriedItem>(actor);
+        if(carried != nullptr){
             return true;
         }
         return false;
@@ -153,20 +157,7 @@ void EdgeCollector::getAllEdges(UWorld* World)
 
     }
 
-    /*
-    //debug: return empty edges, all is added in deeper state function
-    
-    
-    //copy edges bottom
-    
-    for (int i = 0; i < edgeDataEdges.size(); i++){
-        //FVector t = edgeDataEdges->at(i).bottom + (edgeDataEdges->at(i).top - edgeDataEdges->at(i).bottom) * 0.1f;
-        readEdges.push_back(edgeDataEdges.at(i).bottom);
-        //readEdges->push_back(t);
-    }
-
-    return readEdges; //dereference and return
-    */
+   
 }
 
 
@@ -186,11 +177,6 @@ void EdgeCollector::getEdgesForActor(AActor* actor){
         }
 
     
-        /*
-        //copy edges bottom
-        for (int i = 0; i < vectorEdges.size(); i++){
-            vector.push_back(vectorEdges.at(i).bottom);
-        }*/
     }
 }
 
@@ -309,17 +295,11 @@ void EdgeCollector::getEdgesFromSingleMesh(
     }
 
     ComputeConvexHull(currentEdges);
-    //CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
+    CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
 
 
     //caluclate raycast hits and apply to all edges aligning them properly
     collectRaycasts(currentEdges, worldIn);
-
-
-
-    // insert(start orig, start appended, end appended);
-    //edgeDataEdges->insert(edgeDataEdges->end(), currentEdges.begin(), currentEdges.end());
-    //vector.insert(vector.end(), currentEdges.begin(), currentEdges.end());
 
 
 
@@ -511,11 +491,10 @@ void EdgeCollector::collectRaycasts(std::vector<edgeData> &edges, UWorld *world)
     {
         centerTop += edges.at(i).top;
         centerBottom += edges.at(i).bottom;
-        center += edges.at(i).top + edges.at(i).bottom;
     }
     centerTop /= (edges.size());
     centerBottom /= (edges.size());
-    center /= (edges.size() * 2);
+    center = (centerTop + centerBottom) / 2;
 
     //apply offset smallest //PUSHOUT EDGE TO NOT COLLIDE WITH ORIGINAL ACTOR
     for (int i = 0; i < edges.size(); i++) {
@@ -543,9 +522,9 @@ void EdgeCollector::collectRaycasts(std::vector<edgeData> &edges, UWorld *world)
 void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
     if(world){
         FVector Start = edge.top;
-        Start.Z += 1000;
+        //Start.Z += 500;
         FVector End = edge.bottom;
-        End.Z -= 1000;
+        End.Z -= 500;
 
         FHitResult HitResult;
 		FCollisionQueryParams Params;
@@ -566,7 +545,7 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
             float hitDistanceFromBottom = FVector::Dist(edge.bottom, HitResult.ImpactPoint);
             
             //prevent nodes in ground and too far up
-            if(hitDistanceFromTop > hitDistanceFromBottom){
+            if(hitDistanceFromTop > hitDistanceFromBottom * 1.5f){
 
                 FVector hitPos = HitResult.ImpactPoint;
                 hitPos.Z += GROUND_OFFSET; //offset fix above ground
@@ -596,10 +575,10 @@ void EdgeCollector::CleanUpParalellEdges(std::vector<edgeData> &currentEdges){
 
     int size = currentEdges.size() - 1;
     int i = 1;
-    while(i < size){
+    while(i < size - 1){
         FVector &a = currentEdges.at(i - 1).top;
-        FVector &b = currentEdges.at(i - 1).top;
-        FVector &c = currentEdges.at(i - 1).top;
+        FVector &b = currentEdges.at(i ).top;
+        FVector &c = currentEdges.at(i + 1).top;
 
         if (xyExtension(a,b,c))
         {

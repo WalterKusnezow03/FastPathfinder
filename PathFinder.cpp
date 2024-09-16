@@ -379,7 +379,7 @@ std::vector<FVector> PathFinder::findPath(
     Node *end, 
     std::vector<PathFinder::Node*> &subgraph
 ){
-    screenMessage(FString::Printf(TEXT("subgraph size %d"), subgraph.size()));
+    //screenMessage(FString::Printf(TEXT("subgraph size %d"), subgraph.size()));
     
 
     for (int i = 0; i < subgraph.size(); i++){
@@ -416,15 +416,15 @@ std::vector<FVector> PathFinder::findPath(
             if(reached(current, end)){
             //if(current == end){ //|| canSee(current, end)){
                 //path found
-                screenMessage("found path");
+                //screenMessage("found path");
                 return constructPath(end);
             }
 
             //show opened nodes: debugging
             if(debugDrawNodes){
-                //showPos(current->pos, FColor::Blue);
+                showPos(current->pos, FColor::Blue);
             }
-            //
+            
 
             current->close();
             for (int i = 0; i < subgraph.size(); i++)
@@ -589,9 +589,14 @@ bool PathFinder::canSee(FVector &Start, FVector &End){
     if(worldPointer){
         FHitResult HitResult;
 		FCollisionQueryParams Params;
-		//Params.AddIgnoredActor(this); // Ignore the character itself
 
-		bool bHit = worldPointer->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params);
+        //add params from entity manager (contains all bots for example, which can be ignored)
+        //part of a bigger context im working on, comment out or provide your own params
+        if(EntityManager *e = worldLevel::entityManager()){
+            Params = e->getIgnoredRaycastParams();
+        }
+
+        bool bHit = worldPointer->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params);
         if(bHit){
             return false;
         }else{

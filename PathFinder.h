@@ -8,6 +8,9 @@
  * a modified a* version which operates on subgraphs and rechecks edges on runtime
  * the edges are build and checked on runtime because we want to operate on subgraphs
  * efficently. Also it adds supports for dynamic actors like vehicles blocking paths temporarily
+ * 
+ * it also eliminates all non tangential edges during runtime because they are never part 
+ * of a shortest path!
  */
 class P2_API PathFinder
 {
