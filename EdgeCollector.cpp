@@ -295,7 +295,9 @@ void EdgeCollector::getEdgesFromSingleMesh(
     }
 
     ComputeConvexHull(currentEdges);
-    CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
+
+    //causes issues currently
+    //CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
 
 
     //caluclate raycast hits and apply to all edges aligning them properly

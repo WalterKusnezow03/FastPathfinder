@@ -1152,18 +1152,14 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                     ){ //open only if not closed, can see, prebuild edges
 
                         //add here tangential check later!
-
-
                         float gxNew = current->gx + distance(current->pos, neighbor->pos);
                         if(gxNew < neighbor->gx){
                             //screenMessage(300);
                             float hxEnd = distance(neighbor->pos, end->pos);
                             neighbor->updateCameFrom(gxNew, hxEnd, *current);
-
-                                
                         }
                         //ADD TO OPEN LIST!! //if readded is bubbled up automatically!
-                        open.add(neighbor); 
+                        open.add(neighbor);
                     }
                 }
             }
