@@ -15,11 +15,13 @@
 class P2_API PathFinder
 {
 public:
-	static const bool debugDrawNodes = false; //false
+	static const bool debugDrawNodes = true; //false
 
 	~PathFinder();
+	
 
 	static PathFinder *instance(UWorld *worldIn);
+	static PathFinder *instance();
 	//static void deleteInstance();
 
 	void clear(); //clears ALL NODES
@@ -52,6 +54,8 @@ public:
 			PathFinder::Node *nB = nullptr;
 
 			bool hasNeighbors();
+
+			std::vector<Node *> visible_tangential_Neighbors;
 	};
 
 	void addNode(PathFinder::Node *node);
@@ -87,7 +91,8 @@ private:
 			bool hasNode(FVector pos);
 
 			void clear();
-		};
+
+	};
 
 	class Quadrant{
 		private:
@@ -108,6 +113,8 @@ private:
 			void add(Node *node);
 
 			void clear();
+
+		
 	};
 
 	class Quadrant *TopRight;
@@ -122,6 +129,7 @@ private:
 	void showPos(FVector e, FColor c);
 
 	void debugCountNodes();
+	
 
 	float distance(Node *A, Node *B);
 	float distance(FVector A, FVector B);
@@ -140,8 +148,24 @@ private:
 		Node *end
 	);
 
-	bool canSee(PathFinder::Node *A, PathFinder::Node *B);
+	bool canSeeTangential(PathFinder::Node *A, PathFinder::Node *B);
 	bool canSee(FVector &a, FVector &b);
 
 	bool isCloseAndTooVertical(Node *a, Node *b);
+
+
+
+
+
+
+	static constexpr bool PREBUILD_EDGES_ENABLED = true; //enable disable!
+	static constexpr int PREBUILD_MAXDISTANCE = 20000; //50 meter 50 * 100
+	void connect(PathFinder::Node *node);
+
+	std::vector<FVector> findPath_prebuildEdges(
+		Node *start,
+		Node *end
+	);
+
+	bool isInBounds(FVector &a, FVector &b, PathFinder::Node *check);
 };

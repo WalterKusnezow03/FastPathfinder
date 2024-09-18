@@ -39,7 +39,7 @@ PathFinder::~PathFinder()
     delete (TopLeft); 
 }
 
-PathFinder* PathFinder::pathFinderInstance = nullptr;
+PathFinder* PathFinder::pathFinderInstance = nullptr; //very imporntant, do not delete!
 int PathFinder::countNodes = 0;
 
 PathFinder::Node::Node(FVector posIn){
@@ -54,6 +54,7 @@ PathFinder::Node::Node(FVector posIn){
 
 PathFinder::Node::~Node(){
     camefrom = nullptr;
+    visible_tangential_Neighbors.clear();
 }
 
 PathFinder::Quadrant::Quadrant(int xSampleIn, int ySampleIn){
@@ -140,6 +141,14 @@ PathFinder* PathFinder::instance(UWorld *worldIn){
     if(pathFinderInstance == nullptr){
         pathFinderInstance = new PathFinder(worldIn);
     }
+    return pathFinderInstance;
+}
+
+/// @brief acces the pathFinder instance, WILL NOT CREATE ONE
+/// BECAUSE WORLD CONTEXT IS NOT PROVIDED, CAN RETURN NULLPTR
+/// DO NOT DELETE
+/// @return
+PathFinder* PathFinder::instance(){
     return pathFinderInstance;
 }
 
@@ -277,8 +286,11 @@ std::vector<PathFinder::Node *> PathFinder::getSubGraph(FVector a, FVector b){
         if(array[i] != nullptr){
 
             asked = array[i]->askForArea(a, b);
+            if(asked.size() > 0){
+                nodes.insert(nodes.end(), asked.begin(), asked.end());
+            }
 
-            nodes.insert(nodes.end(), asked.begin(), asked.end());
+            
         }
     }
     return nodes;
@@ -304,18 +316,20 @@ void PathFinder::debugCountNodes(){
 
 
 
-
-
 /// @brief returns a path from a given position a to an given position b
 /// @param a fvector start point targeted
 /// @param b fvector end point targeted
 /// @return a path or an emtpy vector if no path was found
 std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
 
+    
     PathFinder::Node *start = findNode(a);
     PathFinder::Node *end = findNode(b);
 
+
     if(start != nullptr && end != nullptr){
+        DebugHelper::showScreenMessage("ask path print 2");
+
         //check if is last path
         if(prevPath.size() > 0){
             FVector s = prevPath.front();
@@ -329,7 +343,16 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
                 return prevPath;
             }
         }
-    
+
+        //PREBUILD EDGES
+        if(PREBUILD_EDGES_ENABLED){
+            DebugHelper::showScreenMessage("ask path print 3");
+            showPos(start->pos, FColor::Green);
+            showPos(end->pos, FColor::Purple);
+            return findPath_prebuildEdges(start, end);
+        }
+
+        //LIVE CREATED EGDES
 
         //find path
         std::vector<PathFinder::Node *> graph = getSubGraph(a, b);
@@ -340,7 +363,6 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
             DebugHelper::showLineBetween(worldPointer, start->pos, end->pos, FColor::Yellow);
         }
         
-
         return findPath(start, end, graph);
     }
 
@@ -438,10 +460,10 @@ std::vector<FVector> PathFinder::findPath(
                         //all edges are rechecked during runtime 
                         //because otherwise it could not operate on subgraphs
                         //but is nesecarry to eliminate many nodes at once
-                        if(canSee(current, n)){
+                        if(canSeeTangential(current, n)){
                             
 
-                            float gxNew = distance(current->pos, n->pos);
+                            float gxNew = current->gx + distance(current->pos, n->pos);
                             if(gxNew < n->gx){
                                 //screenMessage(300);
                                 float hxEnd = distance(n->pos, end->pos);
@@ -512,7 +534,7 @@ void PathFinder::screenMessage(FString s) {
 /// @param A position A
 /// @param B position B
 /// @return can see without interrupt
-bool PathFinder::canSee(PathFinder::Node *A, PathFinder::Node*B){
+bool PathFinder::canSeeTangential(PathFinder::Node *A, PathFinder::Node*B){
     if(worldPointer && A && B){
 
         // if edge is too vertical and to high: ignore, cant climb walls.
@@ -533,6 +555,9 @@ bool PathFinder::canSee(PathFinder::Node *A, PathFinder::Node*B){
         if (canSee(Start, End)){
             return true;
         }
+        
+
+
 
         //adjustments if any entity might be in way
         Start.Z += ONE_METER * 1.7f;
@@ -582,9 +607,10 @@ bool PathFinder::canSee(PathFinder::Node *A, PathFinder::Node*B){
 }
 
 /// @brief checks with a simple raycasts if nodes can see each other
-/// @param Start 
-/// @param End 
-/// @return 
+/// WILL AUTOMATICALLY INCOPERATE TANGENTIAL CHECKS TOO FOR MINIMAL PATH
+/// @param Start start node
+/// @param End end node
+/// @return edge of interest to pass / existent, efficent
 bool PathFinder::canSee(FVector &Start, FVector &End){
     if(worldPointer){
         FHitResult HitResult;
@@ -644,6 +670,15 @@ bool PathFinder::isCloseAndTooVertical(Node *a, Node *b){
     return false;
 }
 
+
+
+
+
+
+
+
+
+
 /***
  * ---- QUADRANT METHODS ----
  */
@@ -700,9 +735,6 @@ void PathFinder::Quadrant::add(Node *n){
 
 
 
-
-
-
 //finds a node from a quadrant
 PathFinder::Node* PathFinder::Quadrant::findNode(FVector pos){
     int x1 = std::abs(pos.X / CHUNKSIZE);
@@ -715,8 +747,6 @@ PathFinder::Node* PathFinder::Quadrant::findNode(FVector pos){
     }
     return nullptr;
 }
-
-
 
 
 
@@ -821,7 +851,23 @@ std::vector<PathFinder::Node*> PathFinder::Quadrant::askForArea(FVector a, FVect
     return vec;
 }
 
-//CHUNK METHODS
+
+
+
+
+
+
+
+
+
+
+/**
+ * 
+ * 
+ * ---- CHUNK METHODS -----
+ * 
+ * 
+ */
 
 /// @brief adds a new node to the vector with a position
 /// @param vec position of the node to be added
@@ -830,7 +876,13 @@ void PathFinder::Chunk::add(FVector vec){
     
 
     if(hasNode(vec) == false){
-        nodes.push_back(new Node(vec));
+        Node *node = new Node(vec);
+        nodes.push_back(node);
+        //connects to all nodes if enabled in header
+        if(PathFinder *p = PathFinder::instance()){
+            p->connect(node);
+        }
+
         PathFinder::countNodes += 1;
     }
 }
@@ -839,13 +891,7 @@ void PathFinder::Chunk::add(FVector vec){
 /// @param vec position of the node to be added
 void PathFinder::Chunk::add(Node *node){
     if(node != nullptr){
-        /*
-        //find closest node near by
-        if(hasNode(node->pos) == false){
-            nodes.push_back(node);
-            PathFinder::countNodes += 1;
-        }
-        */
+        
         //will only check for duplicate nodes by adress
         for (int i = 0; i < nodes.size(); i++){
             if(nodes.at(i) == node){
@@ -853,6 +899,10 @@ void PathFinder::Chunk::add(Node *node){
             }
         }
         nodes.push_back(node);
+        //connects to all nodes if enabled in header
+        if(PathFinder *p = PathFinder::instance()){
+            p->connect(node);
+        }
     }
 }
 
@@ -871,11 +921,16 @@ std::vector<PathFinder::Node*> &PathFinder::Chunk::getNodes(){
 /// @param pos position of the targetet node
 /// @return returns the closest node near by
 PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
-    if(nodes.size() <= 0){
+    
+    if(nodes.size() <= 0 && PathFinder::PREBUILD_EDGES_ENABLED == false){
 
         PathFinder::Node *s = new PathFinder::Node(pos);
         nodes.push_back(s);
         return s;
+    }
+
+    if(nodes.size() <= 0){
+        return nullptr;
     }
 
     float closest = std::numeric_limits<float>::max();
@@ -935,7 +990,11 @@ bool PathFinder::Chunk::hasNode(FVector pos){
 
 
 
-//NODE METHODS
+/**
+ * 
+ * --- NODE METHODS ---
+ * 
+ */
 
 void PathFinder::Node::reset(){
     camefrom = nullptr;
@@ -968,6 +1027,180 @@ bool PathFinder::Node::hasNeighbors(){
     return nA != nullptr && nB != nullptr;
 }
 
+
+
+/**
+ * 
+ * 
+ * CONNECT SECTION
+ * 
+ * 
+ */
+
+
+
+/// @brief connects a node in all quadrants IF ENABLED BOOL IN HEADER FILE
+/// @param node node to connect
+void PathFinder::connect(Node *node){
+    if(node != nullptr && PathFinder::PREBUILD_EDGES_ENABLED){
+
+        //find min max x and y for distance
+        int max_to_chunks = PREBUILD_MAXDISTANCE / PathFinder::CHUNKSIZE;
+        int lowerX = node->pos.X - PREBUILD_MAXDISTANCE;
+        int lowerY = node->pos.Y - PREBUILD_MAXDISTANCE;
+        int higherX = node->pos.X + PREBUILD_MAXDISTANCE;
+        int higherY = node->pos.Y + PREBUILD_MAXDISTANCE;
+
+        FVector a(lowerX, lowerY, 0);
+        FVector b(higherX, higherY, 0);
+
+        std::vector<Node *> enclosedByMaxDistance = getSubGraph(a, b);
+
+        for (int i = 0; i < enclosedByMaxDistance.size(); i++){
+            Node *compare = enclosedByMaxDistance.at(i);
+            if(compare != nullptr && compare != node){
+                // includes tangential check if possible!
+                if(PathFinder *p = PathFinder::instance()){
+
+                    if (p->canSee(node->pos, enclosedByMaxDistance.at(i)->pos)) 
+                    //if (p->canSeeTangential(node, enclosedByMaxDistance.at(i))) 
+                    {
+                        node->visible_tangential_Neighbors.push_back(compare);
+                        compare->visible_tangential_Neighbors.push_back(node);
+
+                        //DebugHelper::showLineBetween(worldPointer, node->pos, compare->pos);
+
+                        DebugHelper::showScreenMessage("connected!");
+                        
+                    }
+                }
+            }
+            
+        }
+
+
+
+    }
+}
+
+
+/// @brief custom path finding method for graph with prebuild edges
+/// @param start 
+/// @param end 
+/// @return the path if the minimal one found
+std::vector<FVector> PathFinder::findPath_prebuildEdges(
+    Node *start,
+	Node *end
+){
+    if(start == nullptr || end == nullptr){
+        std::vector<FVector> o;
+        return o;
+    }
+    DebugHelper::showScreenMessage("ask path");
+    start->camefrom = nullptr;
+    start->closedFlag = false;
+    start->gx = 0;
+    start->fx = 0;
+    end->reset();
+    end->camefrom = nullptr;
+    end->closedFlag = false;
+
+
+    int lowerX = std::min(start->pos.X, end->pos.X);
+    int lowerY = std::min(start->pos.Y, end->pos.Y);
+    int higherX = std::max(start->pos.X, end->pos.X);
+    int higherY = std::max(start->pos.Y, end->pos.Y);
+
+    FVector lower(lowerX, lowerY, 0);
+    FVector higher(higherX, higherY, 0);
+
+    std::vector<Node *> markedForCleanUp; //must be cleaned before returning path
+    priorityQueue open;
+    open.add(start);
+
+    while(open.hasNodes()){
+        PathFinder::Node *current = open.popLowestFx();
+        if (current != nullptr)
+        {
+            markedForCleanUp.push_back(current); //dont forget to push back for cleaning up later
+            if (reached(current, end))
+            {
+
+                std::vector<FVector> outputPath = constructPath(end);
+                
+                //clean all status to prevent issues, everything must be cleared
+                for (int i = 0; i < markedForCleanUp.size(); i++)
+                {
+                    Node *n = markedForCleanUp.at(i);
+                    if(n != nullptr){
+                        n->reset();
+                    }
+                }
+                DebugHelper::showScreenMessage("FOUND PATH PREBUILD!", FColor::Purple);
+                return outputPath;
+            }
+
+            //not opened yet
+            current->close(); //close node
+            //traverse NOT opened neighbors and add to open if not added yet (will be handeld by queue automatically)
+            for (int i = 0; i < current->visible_tangential_Neighbors.size(); i++){
+                Node *neighbor = current->visible_tangential_Neighbors[i];
+                if(neighbor != nullptr){
+                    if(
+                        !neighbor->isClosed() && 
+                        isInBounds(lower, higher, neighbor)
+                    ){ //open only if not closed, can see, prebuild edges
+
+                        //add here tangential check later!
+
+
+                        float gxNew = current->gx + distance(current->pos, neighbor->pos);
+                        if(gxNew < neighbor->gx){
+                            //screenMessage(300);
+                            float hxEnd = distance(neighbor->pos, end->pos);
+                            neighbor->updateCameFrom(gxNew, hxEnd, *current);
+
+                                
+                        }
+                        //ADD TO OPEN LIST!! //if readded is bubbled up automatically!
+                        open.add(neighbor); 
+                    }
+                }
+            }
+        }
+    }
+
+    //no path found, make sure to reset all nodes flag status
+    for (int i = 0; i < markedForCleanUp.size(); i++){
+        Node *n = markedForCleanUp.at(i);
+        if(n != nullptr){
+            n->reset();
+            n->closedFlag = false;
+        }
+    }
+
+    DebugHelper::showScreenMessage("no path found");
+
+
+    std::vector<FVector> placeholder;
+    return placeholder;
+}
+
+
+
+bool PathFinder::isInBounds(FVector &a, FVector &b, PathFinder::Node *check){
+    if(check != nullptr){
+        FVector c = check->pos;
+        return (a.X <= c.X && a.Y <= c.Y && c.X <= b.X && c.Y <= b.Y);
+    }
+    return false;
+}
+
+/**
+ * 
+ * --- TANGENTIAL CHECKING ---
+ * 
+ */
 
 
 /// @brief needs to pass the tangential check before being a node of interest

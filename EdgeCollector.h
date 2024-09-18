@@ -17,7 +17,7 @@ public:
 	EdgeCollector();
 	~EdgeCollector();
 private:
-	static const int GROUND_OFFSET = 100;
+	static const int GROUND_OFFSET = 70;
 
 	class edgeData
     {
