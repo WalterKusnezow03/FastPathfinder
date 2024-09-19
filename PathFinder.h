@@ -5,12 +5,23 @@
 #include "CoreMinimal.h"
 
 /**
- * a modified a* version which operates on subgraphs and rechecks edges on runtime
+ * a modified a* version 
+ * 
+ * 2 modes:
+ * 
+ * 1)
+ * which operates on subgraphs and rechecks edges on runtime
  * the edges are build and checked on runtime because we want to operate on subgraphs
  * efficently. Also it adds supports for dynamic actors like vehicles blocking paths temporarily
  * 
  * it also eliminates all non tangential edges during runtime because they are never part 
  * of a shortest path!
+ * 
+ * 2)
+ * A node which will prebuild all tangential edges when adding a node
+ * toggle the according boolean in this header file:
+ * will automatically connect nodes, reduces runtime overhead because minimal tangential graph is already build
+ * 
  */
 class P2_API PathFinder
 {
@@ -30,6 +41,7 @@ public:
 	void addNewNodeVector(std::vector<FVector> &vec);
 	void addNewNode(FVector a);
 
+	void addConvexHull(std::vector<FVector> &vec);
 
 	std::vector<FVector> getPath(FVector a, FVector b);
 
@@ -63,11 +75,12 @@ public:
 	};
 
 	void addNode(PathFinder::Node *node);
-	bool reached(PathFinder::Node *a, PathFinder::Node *b);
+	
 
 private:
 	std::vector<FVector> prevPath;
 
+	bool reached(PathFinder::Node *a, PathFinder::Node *b);
 	bool passTangentailCheck(Node *a, Node *b);
 
 	static constexpr int CHUNKSIZE = 2000; // 1m = 100, 20m = 2000

@@ -179,6 +179,7 @@ void PathFinder::showPos(FVector e, FColor c){
 
 
 /// @brief adds a new node vector (of locations) to the graph and applies an offset to each node
+/// all nodes are independant
 /// if wanted
 /// @param vec vector to add to graph 
 /// @param offset offset to apply to each node
@@ -190,15 +191,78 @@ void PathFinder::addNewNodeVector(std::vector<FVector> &vec, FVector &offset){
 
 
 
-/// @brief add nodes to the graph
+/// @brief add nodes to the graph, all independant
 /// @param vec vector to push completly
 void PathFinder::addNewNodeVector(std::vector<FVector>& vec){
     for (int i = 0; i < vec.size(); i++){
         addNewNode(vec.at(i));
     }
 
-    //debugCountNodes();
 }
+
+
+
+/// @brief expects the vector to be a convex hull of an object / grounded nodes! Do not ignore!
+/// @param vector vector of positions, convex hull!
+void PathFinder::addConvexHull(std::vector<FVector> &vec){
+    
+    //create all nodes
+    std::vector<Node *> outNodes;
+    for (int i = 0; i < vec.size(); i++){
+        PathFinder::Node *n = new PathFinder::Node(vec.at(i));
+        outNodes.push_back(n);
+    }
+
+    // add the konvex neighbors
+    for (int i = 0; i < vec.size(); i++)
+    {
+        PathFinder::Node *prev = nullptr;
+        PathFinder::Node *next = nullptr;
+
+        if (i == 0)
+        {
+            prev = outNodes.at(outNodes.size() - 1);
+        }else{
+            prev = outNodes.at(i - 1);
+        }
+
+
+        if(i == outNodes.size() - 1){
+            next = outNodes.at(0);
+        }
+        else{
+            next = outNodes.at(i + 1);
+        }
+
+
+        PathFinder::Node *current = outNodes.at(i);
+        if(prev != nullptr && current != nullptr && next != nullptr){
+            //current->nA = prev;
+            //current->nB = next;
+            current->setConvexNeighborA(prev);
+            current->setConvexNeighborB(next);
+        }
+
+    }
+
+    //alle sofort in graphen ballern
+    for (int i = 0; i < outNodes.size(); i++){
+        if(outNodes.at(i) != nullptr){
+            addNode(outNodes.at(i));
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 
 /// @brief adds a single node to the graph
 /// @param a node to add
@@ -658,7 +722,7 @@ bool PathFinder::isCloseAndTooVertical(Node *a, Node *b){
     if(a != nullptr && b != nullptr){
         // AB = B - A;
         FVector AB = b->pos - a->pos;
-        float upZ = std::abs(AB.GetSafeNormal().Z);
+        float upZ = std::abs(AB.GetSafeNormal().Z); //if the normalized vector, Z is close to 1 its paralell to up axis
         float scale = std::abs(AB.Z);
         if (upZ > 0.8f)
         {
@@ -1031,7 +1095,7 @@ bool PathFinder::Node::hasNeighbors(){
 
 /// @brief will set the a neighbor and also add the other convex node to tangential neighbors
 /// because IT IS CONVEX!
-/// @param n 
+/// @param n node 
 void PathFinder::Node::setConvexNeighborA(Node *n){
     if(n != nullptr){
         nA = n;
@@ -1040,7 +1104,7 @@ void PathFinder::Node::setConvexNeighborA(Node *n){
 }
 /// @brief will set the a neighbor and also add the other convex node to tangential neighbors
 /// because IT IS CONVEX!
-/// @param n 
+/// @param n node 
 void PathFinder::Node::setConvexNeighborB(Node *n){
     if(n != nullptr){
         nB = n;
@@ -1127,7 +1191,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         std::vector<FVector> o;
         return o;
     }
-    //DebugHelper::showScreenMessage("ask path");
+    DebugHelper::showScreenMessage("ask path");
     start->camefrom = nullptr;
     start->closedFlag = false;
     start->gx = 0;
@@ -1137,6 +1201,8 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
     end->closedFlag = false;
 
 
+    //bounding box for traversed nodes
+    FVector center = (start->pos + end->pos) / 2;
     int lowerX = std::min(start->pos.X, end->pos.X);
     int lowerY = std::min(start->pos.Y, end->pos.Y);
     int higherX = std::max(start->pos.X, end->pos.X);
@@ -1144,6 +1210,12 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
 
     FVector lower(lowerX, lowerY, 0);
     FVector higher(higherX, higherY, 0);
+
+    float boundingBoxIncreaseFrac = 1.0f;
+    lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
+    higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
+
+
 
     std::vector<Node *> markedForCleanUp; //must be cleaned before returning path
     priorityQueue open;
@@ -1178,8 +1250,8 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                 Node *neighbor = current->visible_tangential_Neighbors[i];
                 if(neighbor != nullptr){
                     if(
-                        !neighbor->isClosed() && 
-                        isInBounds(lower, higher, neighbor)
+                        !neighbor->isClosed() 
+                        //&& isInBounds(lower, higher, neighbor)
                     ){ //open only if not closed, can see, prebuild edges
 
                         //add here tangential check later!
@@ -1206,7 +1278,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         }
     }
 
-    //DebugHelper::showScreenMessage("no path found");
+    DebugHelper::showScreenMessage("no path found");
 
 
     std::vector<FVector> placeholder;

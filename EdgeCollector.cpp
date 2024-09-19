@@ -301,9 +301,16 @@ void EdgeCollector::getEdgesFromSingleMesh(
     //caluclate raycast hits and apply to all edges aligning them properly
     collectRaycasts(currentEdges, worldIn);
 
+    std::vector<FVector> toPosVec;
+    for (int i = 0; i < currentEdges.size(); i++){
+        toPosVec.push_back(currentEdges.at(i).bottom);
+    }
+    if(PathFinder *f = PathFinder::instance(worldIn)){
+        f->addConvexHull(toPosVec);
+    }
+    return;
 
-
-    
+    /*
     // since the hull of the nodes is convex, the 2 neighbors for each can be added
     std::vector<PathFinder::Node *> outNodes;
     for (int i = 0; i < currentEdges.size(); i++){
@@ -346,6 +353,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
             }
         }
     }
+    */
 }
 
 
@@ -562,10 +570,16 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
             //distance from top must be greater than bottom from hitpoint
             //to make the hit point valid
             //(if you stick your meshes into the ground thats not my issue.)
-            float completeDistance = FVector::Dist(edge.bottom, edge.top);
-            float hitDistanceFromTop = FVector::Dist(edge.top, HitResult.ImpactPoint);
-            float hitDistanceFromBottom = FVector::Dist(edge.bottom, HitResult.ImpactPoint);
+            //float completeDistance = FVector::Dist(edge.bottom, edge.top);
+            //float hitDistanceFromTop = FVector::Dist(edge.top, HitResult.ImpactPoint);
+            //float hitDistanceFromBottom = FVector::Dist(edge.bottom, HitResult.ImpactPoint);
             
+            //refacturing for z distance
+            float completeDistance = std::abs(edge.bottom.Z - edge.top.Z);
+            float hitDistanceFromTop = std::abs(edge.top.Z - HitResult.ImpactPoint.Z);
+            float hitDistanceFromBottom = std::abs(edge.bottom.Z - HitResult.ImpactPoint.Z);
+
+
             //prevent nodes in ground and too far up
             if(hitDistanceFromTop > hitDistanceFromBottom * 1.5f){
 
@@ -576,7 +590,10 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
 
 
                 //debug testing
-                DebugHelper::showLineBetween(world, edge.top, hitPos, FColor::Cyan);
+                if(EdgeCollector::DEBUG_DRAW_EDGES){
+                    DebugHelper::showLineBetween(world, edge.top, hitPos, FColor::Cyan);
+                }
+                
             }
         }
     }

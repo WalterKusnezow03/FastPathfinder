@@ -18,6 +18,7 @@ public:
 	~EdgeCollector();
 private:
 	static const int GROUND_OFFSET = 70;
+	static const bool DEBUG_DRAW_EDGES = false;
 
 	class edgeData
     {
