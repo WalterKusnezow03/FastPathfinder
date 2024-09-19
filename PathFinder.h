@@ -50,6 +50,10 @@ public:
 
 			float oldfx;
 
+			void setConvexNeighborA(Node *n);
+			void setConvexNeighborB(Node *n);
+			void addTangentialNeighbor(Node *n);
+
 			PathFinder::Node *nA = nullptr;
 			PathFinder::Node *nB = nullptr;
 

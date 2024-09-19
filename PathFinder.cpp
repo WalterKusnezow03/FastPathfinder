@@ -328,7 +328,9 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
 
 
     if(start != nullptr && end != nullptr){
-        DebugHelper::showScreenMessage("ask path print 2");
+        //DebugHelper::showScreenMessage("ask path print 2");
+
+        DebugHelper::showScreenMessage("try find path");
 
         //check if is last path
         if(prevPath.size() > 0){
@@ -346,7 +348,7 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
 
         //PREBUILD EDGES
         if(PREBUILD_EDGES_ENABLED){
-            DebugHelper::showScreenMessage("ask path print 3");
+            //DebugHelper::showScreenMessage("ask path print 3");
             showPos(start->pos, FColor::Green);
             showPos(end->pos, FColor::Purple);
             return findPath_prebuildEdges(start, end);
@@ -1027,6 +1029,33 @@ bool PathFinder::Node::hasNeighbors(){
     return nA != nullptr && nB != nullptr;
 }
 
+/// @brief will set the a neighbor and also add the other convex node to tangential neighbors
+/// because IT IS CONVEX!
+/// @param n 
+void PathFinder::Node::setConvexNeighborA(Node *n){
+    if(n != nullptr){
+        nA = n;
+        addTangentialNeighbor(n);
+    }
+}
+/// @brief will set the a neighbor and also add the other convex node to tangential neighbors
+/// because IT IS CONVEX!
+/// @param n 
+void PathFinder::Node::setConvexNeighborB(Node *n){
+    if(n != nullptr){
+        nB = n;
+        addTangentialNeighbor(n);
+    }
+}
+/// @brief adds a node to the tangential connected neighbors
+/// @param n must not be nullptr
+void PathFinder::Node::addTangentialNeighbor(Node *n){
+    if(n != nullptr){
+        visible_tangential_Neighbors.push_back(n);
+    }
+}
+
+
 
 
 /**
@@ -1065,12 +1094,14 @@ void PathFinder::connect(Node *node){
                     if (p->canSee(node->pos, enclosedByMaxDistance.at(i)->pos)) 
                     //if (p->canSeeTangential(node, enclosedByMaxDistance.at(i))) 
                     {
-                        node->visible_tangential_Neighbors.push_back(compare);
-                        compare->visible_tangential_Neighbors.push_back(node);
+                        //node->visible_tangential_Neighbors.push_back(compare);
+                        //compare->visible_tangential_Neighbors.push_back(node);
+                        node->addTangentialNeighbor(compare);
+                        compare->addTangentialNeighbor(node);
 
                         //DebugHelper::showLineBetween(worldPointer, node->pos, compare->pos);
 
-                        DebugHelper::showScreenMessage("connected!");
+                        //DebugHelper::showScreenMessage("connected!");
                         
                     }
                 }
@@ -1096,7 +1127,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         std::vector<FVector> o;
         return o;
     }
-    DebugHelper::showScreenMessage("ask path");
+    //DebugHelper::showScreenMessage("ask path");
     start->camefrom = nullptr;
     start->closedFlag = false;
     start->gx = 0;
@@ -1136,7 +1167,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                         n->reset();
                     }
                 }
-                DebugHelper::showScreenMessage("FOUND PATH PREBUILD!", FColor::Purple);
+                //DebugHelper::showScreenMessage("FOUND PATH PREBUILD!", FColor::Purple);
                 return outputPath;
             }
 
@@ -1175,7 +1206,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         }
     }
 
-    DebugHelper::showScreenMessage("no path found");
+    //DebugHelper::showScreenMessage("no path found");
 
 
     std::vector<FVector> placeholder;
