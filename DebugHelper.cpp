@@ -11,31 +11,41 @@ DebugHelper::~DebugHelper()
 {
 }
 
-/// @brief shows a scnreen message in green color
-/// @param s string to show
-void DebugHelper::showScreenMessage(FString s){
-    if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, s);
-	}
-}
+/**
+ * 
+ *  --- SCREEN MESSAGES ---
+ * 
+ */
 
 /// @brief showsa screen message and a color
 /// @param s 
 /// @param color 
 void DebugHelper::showScreenMessage(FString s, FColor color){
-    if (GEngine)
+
+	bool check = false;
+	if(check){
+		FString filterString = "filter string";
+		if(s.Contains(filterString) == false ){ 
+			return;
+		}
+	}
+	
+	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, color, s);
 	}
 }
 
-/// @brief shows a screen message and a number of choice
-/// @param s string
-/// @param argument number to concatenate 
-void DebugHelper::showScreenMessage(FString s, int argument){
-	showScreenMessage(s, argument, FColor::Green);
+
+
+
+/// @brief shows a scnreen message in green color
+/// @param s string to show
+void DebugHelper::showScreenMessage(FString s){
+	showScreenMessage(s, FColor::Green);
 }
+
+
 
 void DebugHelper::showScreenMessage(FString s, int argument, FColor color){
 	FString res = s;
@@ -44,8 +54,56 @@ void DebugHelper::showScreenMessage(FString s, int argument, FColor color){
 }
 
 
+/// @brief shows a screen message and a number of choice
+/// @param s string
+/// @param argument number to concatenate 
+void DebugHelper::showScreenMessage(FString s, int argument){
+	showScreenMessage(s, argument, FColor::Green);
+}
 
 
+
+void DebugHelper::showScreenMessage(FString s, FVector2D a, FVector2D b, FColor color){
+	FString sOut = s;
+	FString xPart = connect(a.X, b.X);
+	FString yPart = connect(a.Y, b.Y);
+
+	sOut = sOut + TEXT("\n") +
+				   xPart + TEXT("\n") +
+				   yPart + TEXT("\n");
+
+	showScreenMessage(sOut, color);
+}
+
+void DebugHelper::showScreenMessage(FString s, FVector a, FVector b, FColor color){
+
+	FString sOut = s;
+	FString xPart = connect(a.X, b.X);
+	FString yPart = connect(a.Y, b.Y);
+	FString zPart = connect(a.Z, b.Z);
+
+	sOut = sOut + TEXT("\n") +
+				   xPart + TEXT("\n") +
+				   yPart + TEXT("\n") +
+				   zPart + TEXT("\n");
+
+	showScreenMessage(sOut, color);
+}
+
+FString DebugHelper::connect(int a, int b){
+	FString out = FString::Printf(TEXT("%d"), a);
+	out += TEXT(" ");
+	out += FString::Printf(TEXT("%d"), b);
+	return out;
+}
+
+
+
+/**
+ * 
+ *  --- DRAW LINES ---
+ *
+ */
 
 
 
@@ -95,4 +153,27 @@ void DebugHelper::showLine(UWorld *world, TArray<FVector> &array, FColor color){
 			showLineBetween(world, array[i-1], array[i], color);
 		}
 	}
+}
+
+
+
+
+void DebugHelper::showLineBetween(UWorld *world, FVector2D Start, FVector2D End){
+	showLineBetween(world, Start, End, 100);
+}
+
+void DebugHelper::showLineBetween(UWorld *world, FVector2D Start, FVector2D End, int zOffset){
+	showLineBetween(world, Start, End, zOffset, FColor::Blue);
+}
+
+void DebugHelper::showLineBetween(UWorld *world, FVector2D Start, FVector2D End, int zOffset, FColor color){
+	FVector sA(
+		Start.X,
+		Start.Y,
+		zOffset);
+	FVector eB(
+		End.X,
+		End.Y,
+		zOffset);
+	showLineBetween(world, sA, eB, color);
 }
