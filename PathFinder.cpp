@@ -43,8 +43,8 @@ PathFinder* PathFinder::pathFinderInstance = nullptr; //very imporntant, do not 
 int PathFinder::countNodes = 0;
 
 PathFinder::Node::Node(FVector posIn){
-    gx = 0;
-    fx = 0;
+    gx = std::numeric_limits<float>::max(); //set to max for unknown status by default
+    fx = gx;
     pos = posIn;
     camefrom = nullptr;
     closedFlag = true;
@@ -1062,9 +1062,10 @@ bool PathFinder::Chunk::hasNode(FVector pos){
  * 
  */
 
+/// @brief resets the nodes: gx, fx, camefrom neighbor and the closed flag
 void PathFinder::Node::reset(){
     camefrom = nullptr;
-    gx = std::numeric_limits<float>::max();
+    gx = std::numeric_limits<float>::max(); //is set to max for unknown status
     fx = gx;
     closedFlag = false;
 }
@@ -1133,6 +1134,17 @@ void PathFinder::Node::addTangentialNeighbor(Node *n){
 
 
 /// @brief connects a node in all quadrants IF ENABLED BOOL IN HEADER FILE
+///
+/// --- ISSUES I AM AWARE OF : ---
+/// if 2 nodes are compared to each other which are part of 1 convex hull the condition
+/// of tangentiality wont be ever true. 
+/// since it still brings some computanional overhead
+/// the plottet nodes will maybe tracked in polygonal shape-objects some time in future.
+/// it is unclear for me whether i will implement that because searching for the node
+/// in a list brings with O(n) rougly the same overhead as checking the tangential edges for
+/// all points, which is also already greatly reduced by limiting a max distance and 
+/// the subgraph functionality.
+/// ---> it wont be needed most likely
 /// @param node node to connect
 void PathFinder::connect(Node *node){
     if(node != nullptr && PathFinder::PREBUILD_EDGES_ENABLED){
@@ -1180,8 +1192,8 @@ void PathFinder::connect(Node *node){
 
 
 /// @brief custom path finding method for graph with prebuild edges
-/// @param start 
-/// @param end 
+/// @param start start node
+/// @param end end node
 /// @return the path if the minimal one found
 std::vector<FVector> PathFinder::findPath_prebuildEdges(
     Node *start,
@@ -1286,7 +1298,11 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
 }
 
 
-
+/// @brief checks if a node is within the bounding box enclosed by a and b (ordering is not important)
+/// @param a pos a
+/// @param b pos b
+/// @param check node to check, must not be nullptr
+/// @return within box or not. If no node provided, default is false
 bool PathFinder::isInBounds(FVector &a, FVector &b, PathFinder::Node *check){
     if(check != nullptr){
         FVector c = check->pos;

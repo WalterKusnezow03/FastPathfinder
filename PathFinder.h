@@ -47,8 +47,11 @@ public:
 
 	class Node{
 		public:
-			static const int noneFx = -1;
+			static const int noneFx = -1; 
+
+			/// @brief will tell if the node is closed (on the closed list) or not
 			bool closedFlag;
+			/// @brief came from neighbor
 			PathFinder::Node *camefrom = nullptr;
 			float fx;
 			float gx;
