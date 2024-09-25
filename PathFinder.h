@@ -45,9 +45,11 @@ public:
 
 	std::vector<FVector> getPath(FVector a, FVector b);
 
-	class Node{
+
+	class Node
+	{
 		public:
-			static const int noneFx = -1; 
+			static const int noneFx = -1;
 
 			/// @brief will tell if the node is closed (on the closed list) or not
 			bool closedFlag;
@@ -75,10 +77,18 @@ public:
 			bool hasNeighbors();
 
 			std::vector<Node *> visible_tangential_Neighbors;
+
+			// new: hull index
+			int hullindex = -1;
+			bool sameHull(Node *other);
+
+		//private:
+			//class PathFinder::ConvexPolygon *polygon = nullptr;
 	};
 
 	void addNode(PathFinder::Node *node);
 	
+	void debugCountNodes();
 
 private:
 	std::vector<FVector> prevPath;
@@ -112,6 +122,8 @@ private:
 
 			void clear();
 
+			// new:
+			//std::vector<PathFinder::ConvexPolygon *> polygons;
 	};
 
 	class Quadrant{
@@ -148,7 +160,7 @@ private:
 	void showPos(FVector e);
 	void showPos(FVector e, FColor c);
 
-	void debugCountNodes();
+	
 	
 
 	float distance(Node *A, Node *B);
@@ -179,8 +191,10 @@ private:
 
 
 	static constexpr bool PREBUILD_EDGES_ENABLED = true; //enable disable!
-	static constexpr int PREBUILD_MAXDISTANCE = 20000; //50 meter 50 * 100
+	static constexpr bool ASYNC_EDGE_PREBUILDING = true;
+	static constexpr int PREBUILD_MAXDISTANCE = 5000; // 10000 / 100 = 100 meter, keep to 50.
 	void connect(PathFinder::Node *node);
+	void asyncCanSee(Node *a, Node *b);
 
 	std::vector<FVector> findPath_prebuildEdges(
 		Node *start,
@@ -188,4 +202,5 @@ private:
 	);
 
 	bool isInBounds(FVector &a, FVector &b, PathFinder::Node *check);
+
 };

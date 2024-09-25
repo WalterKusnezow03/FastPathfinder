@@ -300,6 +300,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
 
     //caluclate raycast hits and apply to all edges aligning them properly
     collectRaycasts(currentEdges, worldIn);
+    showEdges(currentEdges, worldIn); //debug
 
     std::vector<FVector> toPosVec;
     for (int i = 0; i < currentEdges.size(); i++){
@@ -310,50 +311,6 @@ void EdgeCollector::getEdgesFromSingleMesh(
     }
     return;
 
-    /*
-    // since the hull of the nodes is convex, the 2 neighbors for each can be added
-    std::vector<PathFinder::Node *> outNodes;
-    for (int i = 0; i < currentEdges.size(); i++){
-        PathFinder::Node *n = new PathFinder::Node(currentEdges.at(i).bottom);
-        outNodes.push_back(n);
-    }
-
-    //add the konvex neighbors
-    for (int i = 0; i < outNodes.size(); i++){
-        PathFinder::Node *prev = nullptr;
-        PathFinder::Node *next = nullptr;
-
-        if (i == 0){
-            prev = outNodes.at(outNodes.size() - 1);
-        }
-        else{
-            prev = outNodes.at(i - 1);
-        }
-
-
-        if(i == outNodes.size() - 1){
-            next = outNodes.at(0);
-        }
-        else{
-            next = outNodes.at(i + 1);
-        }
-
-        PathFinder::Node *current = outNodes.at(i);
-        //current->nA = prev;
-        //current->nB = next;
-        current->setConvexNeighborA(prev);
-        current->setConvexNeighborB(next);
-    }
-
-    //alle sofort in graphen ballern
-    if(PathFinder *f = PathFinder::instance(worldIn)){
-        for (int i = 0; i < outNodes.size(); i++){
-            if(outNodes.at(i) != nullptr){
-                f->addNode(outNodes.at(i));
-            }
-        }
-    }
-    */
 }
 
 
