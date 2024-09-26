@@ -10,6 +10,14 @@ priorityQueue::priorityQueue()
 
 priorityQueue::~priorityQueue()
 {
+    //will reset all remaining nodes 
+    /*
+    for (int i = 0; i < nodes.size(); i++){
+        PathFinder::Node *node = nodes.at(i);
+        if(node != nullptr){
+            node->reset();
+        }
+    }*/
 }
 
 

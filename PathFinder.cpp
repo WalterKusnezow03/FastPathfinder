@@ -1292,34 +1292,37 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
 /// @return 
 FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
 
-    FTraceDelegate *delegate  = nullptr;
-    if (released.size() > 0)
-    {
-        delegate = released.back();
-        released.pop_back();
-    }
-    if(delegate == nullptr){
-        delegate = new FTraceDelegate();
-    }
-    if(delegate != nullptr){
-        delegate->BindLambda([a, b, delegate](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
-            // Lambda logic for handling the trace result
-            bool bHit = TraceData.OutHits.Num() > 0;
+    if(a != nullptr && b != nullptr){
+        FTraceDelegate *delegate  = nullptr;
+        if (released.size() > 0)
+        {
+            delegate = released.back();
+            released.pop_back();
+        }
+        if(delegate == nullptr){
+            delegate = new FTraceDelegate();
+        }
+        if(delegate != nullptr){
+            delegate->BindLambda([a, b, delegate](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
+                // Lambda logic for handling the trace result
+                bool bHit = TraceData.OutHits.Num() > 0;
 
-            //no hit, can see.
-            if(!bHit){
-                a->addTangentialNeighbor(b);
-                b->addTangentialNeighbor(a);
-            }
-            //DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
+                //no hit, can see.
+                if(!bHit){
+                    a->addTangentialNeighbor(b);
+                    b->addTangentialNeighbor(a);
+                }
+                //DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
 
-            if(PathFinder *i = PathFinder::instance()){
-                i->freeDelegate(delegate);
-            }        
-        });
+                if(PathFinder *i = PathFinder::instance()){
+                    i->freeDelegate(delegate);
+                }        
+            });
+        }
+        
+        return delegate;
     }
-    
-    return delegate;
+    return nullptr;
 }
 
 void PathFinder::freeDelegate(FTraceDelegate *d){
@@ -1369,9 +1372,9 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
     FVector lower(lowerX, lowerY, 0);
     FVector higher(higherX, higherY, 0);
 
-    //float boundingBoxIncreaseFrac = 1.0f;
-    //lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
-    //higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
+    int boundingBoxIncreaseFrac = 2;
+    lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
+    higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
 
 
 
@@ -1421,6 +1424,9 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                         }
                         //ADD TO OPEN LIST!! //if readded is bubbled up automatically!
                         open.add(neighbor);
+
+                        //even if a node wasnt the lowest it must be cleaned later!
+                        markedForCleanUp.push_back(neighbor);
                     }
                 }
             }
