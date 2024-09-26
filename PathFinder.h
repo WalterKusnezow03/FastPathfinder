@@ -205,7 +205,7 @@ private:
 		public:
 			ConvexPolygon(std::vector<PathFinder::Node *> &nodes);
 			~ConvexPolygon();
-			std::vector<PathFinder::Node *> nodes;
+			std::vector<PathFinder::Node *> nodes; // must be sorted properly from conex hull
 			//2D vector for nodes which can see each other in one row
 			//std::vector<std::vector<PathFinder::Node *>> nodes
 			std::vector<FVector> findFastPathOnHull(Node *a, Node *b);
@@ -221,7 +221,7 @@ private:
 	std::vector<FTraceDelegate *> released;
 	FTraceDelegate *requestDelegate(Node *a, Node *b);
 
-
+	void clearDelegates();
 
 public:
 	void freeDelegate(FTraceDelegate *d);

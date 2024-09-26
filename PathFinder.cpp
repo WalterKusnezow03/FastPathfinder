@@ -38,16 +38,7 @@ PathFinder::~PathFinder()
     delete (BottomLeft); 
     delete (TopLeft);
 
-    //delete all delegates
-    for (int i = 0; i < released.size(); i++){
-        FTraceDelegate *delegate = released.at(i);
-        if (delegate != nullptr)
-        {
-            //DebugHelper::logMessage("debug deleted delegate");
-            delete delegate;
-            
-        }
-    }
+    clearDelegates();
 }
 
 PathFinder* PathFinder::pathFinderInstance = nullptr; //very imporntant, do not delete!
@@ -106,6 +97,7 @@ void PathFinder::clear(){
             array[i]->clear();
         }
     }
+    clearDelegates();
 }
 
 void PathFinder::Quadrant::clear(){
@@ -130,6 +122,19 @@ void PathFinder::Chunk::clear(){
 }
 
 
+void PathFinder::clearDelegates(){
+    //delete all delegates
+    for (int i = 0; i < released.size(); i++){
+        FTraceDelegate *delegate = released.at(i);
+        if (delegate != nullptr)
+        {
+            //DebugHelper::logMessage("debug deleted delegate");
+            delete delegate;
+            
+        }
+    }
+    released.clear();
+}
 
 //clear functions end
 
@@ -407,7 +412,7 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
     if(start != nullptr && end != nullptr){
         //DebugHelper::showScreenMessage("ask path print 2");
 
-        DebugHelper::showScreenMessage("try find path");
+        //DebugHelper::showScreenMessage("try find path");
 
         //check if is last path
         if(prevPath.size() > 0){
@@ -1281,7 +1286,10 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
 
 
 
-
+/// @brief request trace delegate to connect nodes a and b on 
+/// @param a 
+/// @param b 
+/// @return 
 FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
 
     FTraceDelegate *delegate  = nullptr;
@@ -1293,26 +1301,32 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
     if(delegate == nullptr){
         delegate = new FTraceDelegate();
     }
+    if(delegate != nullptr){
+        delegate->BindLambda([a, b, delegate](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
+            // Lambda logic for handling the trace result
+            bool bHit = TraceData.OutHits.Num() > 0;
 
-    delegate->BindLambda([a, b, delegate](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
-        // Lambda logic for handling the trace result
-        bool bHit = TraceData.OutHits.Num() > 0;
-        if(bHit){
-            a->addTangentialNeighbor(b);
-            b->addTangentialNeighbor(a);
-        }
-        //DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
+            //no hit, can see.
+            if(!bHit){
+                a->addTangentialNeighbor(b);
+                b->addTangentialNeighbor(a);
+            }
+            //DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
 
-        if(PathFinder *i = PathFinder::instance()){
-            i->freeDelegate(delegate);
-        }        
-    });
+            if(PathFinder *i = PathFinder::instance()){
+                i->freeDelegate(delegate);
+            }        
+        });
+    }
+    
     return delegate;
 }
 
 void PathFinder::freeDelegate(FTraceDelegate *d){
     if(d != nullptr){
-        //DebugHelper::showScreenMessage("freed delegate", FColor::Green);
+
+        FString count = FString(TEXT("delegates %d"), released.size());
+        DebugHelper::showScreenMessage(count, FColor::Green);
         released.push_back(d);
     }
 }
@@ -1355,9 +1369,9 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
     FVector lower(lowerX, lowerY, 0);
     FVector higher(higherX, higherY, 0);
 
-    float boundingBoxIncreaseFrac = 1.0f;
-    lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
-    higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
+    //float boundingBoxIncreaseFrac = 1.0f;
+    //lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
+    //higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
 
 
 
@@ -1410,6 +1424,9 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                     }
                 }
             }
+        }else{
+            //issue
+            break;
         }
     }
 
@@ -1418,7 +1435,6 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         Node *n = markedForCleanUp.at(i);
         if(n != nullptr){
             n->reset();
-            n->closedFlag = false;
         }
     }
 
@@ -1518,3 +1534,122 @@ bool PathFinder::passTangentailCheck(Node *a, Node *b){
 
 
 
+
+/**
+ * 
+ * 
+ * POLY GON CONVEX HULL SECTION
+ * 
+ * 
+ */
+/*
+bool PathFinder::Node::sameHull(Node *other){
+    if(this->polygon != nullptr && this->polygon == other->polygon){
+        return true;
+    }
+    return false;
+}
+
+/// @param nodesIn 
+PathFinder::ConvexPolygon(std::vector<PathFinder::Node *> nodesIn){
+    //nodes = nodesIn;
+    
+    //check which nodes can actually see each other?
+    //or plain adding? unclear.
+
+    nodes = nodesIn;
+}
+
+/// @brief testing needed
+/// @param a 
+/// @param b 
+/// @return 
+std::vector<FVector> PathFinder::ConvexPolygon::findFastPathOnHull(Node* a, Node *b){
+    if(a == nullptr || b == nullptr){
+        std::vector<FVector> none;
+        return none;
+    }
+
+    
+
+    int aIndex = a->hullindex; //always search from a
+    int bIndex = b->hullindex;
+
+    if(
+        aIndex != -1 && bIndex != -1 &&
+        aIndex < nodes.size() && bIndex < nodes.size()
+    ){
+
+        std::vector<Node *> dirA;
+        std::vector<Node *> dirB;
+        float sumA = 0;
+        float sumB = 0;
+
+
+        dirA.push_back(nodes[aIndex]);
+        dirB.push_back(nodes[aIndex]);
+
+        int currentSearch1 = aIndex;//will save the current position in both directions on hull
+        int currentSearch2 = aIndex;
+        int prevSearch1 = aIndex; //save the prev index
+        int prevSearch2 = aIndex;
+        bool search1Locked = false;
+        bool search2Locked = false;
+
+        while(currentSearch1 != bIndex && currentSearch2 != bIndex){ //look out for target
+
+
+            //resembles a modulo operation around hull
+            if(!search1Locked){
+                prevSearch1 = currentSearch1;
+                currentSearch1++;
+                if(currentSearch1 >= nodes.size()){
+                    currentSearch1 = 0; //to front
+                }
+                //add distance
+                Node *prev = nodes[prevSearch1];
+                Node *current = nodes[currentSearch1];
+                dirA.push_back(current);
+                sumA += PathFinder::distance(prev, current);
+
+                if(current == b){
+                    search1Locked = true;
+                }
+            }
+
+            if(!search2Locked){
+                prevSearch2 = currentSearch2;
+                currentSearch2--;
+                if(currentSearch2 < 0){
+                    currentSearch2 = nodes.size() - 1; //to back
+                }
+                //add distance
+                Node *prev = nodes[prevSearch2];
+                Node *current = nodes[currentSearch2];
+                dirB.push_back(current);
+                sumB += PathFinder::distance(prev, current);
+                //lock search and return in case of better sum
+                if(current == b){
+                    search2Locked = true;
+                }
+            }
+            
+            //if any of the searches reached the destination we need to choose the lower local gx path
+            //which is sumA and sumB for clw and cclw on convex hull
+            if(search1Locked){
+                if(sumA <= sumB){
+                    return dirA;
+                }
+            }
+            if(search2Locked){
+                if(sumB <= sumA){
+                    return dirB;
+                }
+            }
+
+        }
+    }
+
+
+}
+*/
