@@ -218,6 +218,8 @@ private:
 	std::vector<PathFinder::ConvexPolygon *> polygonstmp; //will store polygons here for now
 	*/
 
+	FCriticalSection delegate_CriticalSection_a;
+	//FCriticalSection delegate_CriticalSection_b;
 	std::vector<FTraceDelegate *> released;
 	FTraceDelegate *requestDelegate(Node *a, Node *b);
 

@@ -1295,6 +1295,8 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
 FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
 
     if(a != nullptr && b != nullptr){
+        FScopeLock Lock(&delegate_CriticalSection_a);
+
         FTraceDelegate *delegate  = nullptr;
         if (released.size() > 0)
         {
@@ -1329,9 +1331,9 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
 
 void PathFinder::freeDelegate(FTraceDelegate *d){
     if(d != nullptr){
-
-        FString count = FString(TEXT("delegates %d"), released.size());
-        DebugHelper::showScreenMessage(count, FColor::Green);
+        FScopeLock Lock(&delegate_CriticalSection_a);
+        //FString count = FString(TEXT("delegates %d"), released.size());
+        //DebugHelper::showScreenMessage(count, FColor::Green);
         released.push_back(d);
     }
 }
