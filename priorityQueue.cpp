@@ -10,14 +10,6 @@ priorityQueue::priorityQueue()
 
 priorityQueue::~priorityQueue()
 {
-    //will reset all remaining nodes 
-    /*
-    for (int i = 0; i < nodes.size(); i++){
-        PathFinder::Node *node = nodes.at(i);
-        if(node != nullptr){
-            node->reset();
-        }
-    }*/
 }
 
 
@@ -90,6 +82,11 @@ PathFinder::Node *priorityQueue::popLowestFx(){
             indexMap.erase(front);
         }
         downheap();
+
+        if(front != nullptr){
+            //DebugHelper::showScreenMessage("popped fx", front->fx);
+        }
+
         return front;
     }
     return nullptr;

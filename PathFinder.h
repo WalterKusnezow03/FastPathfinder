@@ -82,8 +82,8 @@ public:
 			int hullindex = -1;
 			bool sameHull(Node *other);
 
-		//private:
-			//class PathFinder::ConvexPolygon *polygon = nullptr;
+		private:
+			FCriticalSection CriticalSection;
 	};
 
 	void addNode(PathFinder::Node *node);

@@ -1132,9 +1132,11 @@ void PathFinder::Node::setConvexNeighborB(Node *n){
     }
 }
 /// @brief adds a node to the tangential connected neighbors, will allow duplicate add. Just dont.
+/// will add thread safely
 /// @param n must not be nullptr
 void PathFinder::Node::addTangentialNeighbor(Node *n){
     if(n != nullptr){
+        FScopeLock Lock(&CriticalSection); //lock because of async raycasting
         visible_tangential_Neighbors.push_back(n);
     }
 }
@@ -1254,7 +1256,7 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
                 MyTraceDelegate.BindLambda([a, b](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
                     // Lambda logic for handling the trace result
                     bool bHit = TraceData.OutHits.Num() > 0;
-                    if(bHit){
+                    if(!bHit){
                         a->addTangentialNeighbor(b);
                         b->addTangentialNeighbor(a);
                     }
@@ -1372,9 +1374,9 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
     FVector lower(lowerX, lowerY, 0);
     FVector higher(higherX, higherY, 0);
 
-    int boundingBoxIncreaseFrac = 2;
-    lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
-    higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
+    //int boundingBoxIncreaseFrac = 2;
+    //lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
+    //higher += (center - higher) * boundingBoxIncreaseFrac; // AB = B - A
 
 
 
@@ -1418,7 +1420,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                         //add here tangential check later!
                         float gxNew = current->gx + distance(current->pos, neighbor->pos);
                         if(gxNew < neighbor->gx){
-                            //screenMessage(300);
+                            
                             float hxEnd = distance(neighbor->pos, end->pos);
                             neighbor->updateCameFrom(gxNew, hxEnd, *current);
                         }
