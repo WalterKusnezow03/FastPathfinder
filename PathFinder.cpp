@@ -36,7 +36,18 @@ PathFinder::~PathFinder()
     delete (TopRight); 
     delete (BottomRight); 
     delete (BottomLeft); 
-    delete (TopLeft); 
+    delete (TopLeft);
+
+    //delete all delegates
+    for (int i = 0; i < released.size(); i++){
+        FTraceDelegate *delegate = released.at(i);
+        if (delegate != nullptr)
+        {
+            //DebugHelper::logMessage("debug deleted delegate");
+            delete delegate;
+            
+        }
+    }
 }
 
 PathFinder* PathFinder::pathFinderInstance = nullptr; //very imporntant, do not delete!
@@ -245,12 +256,20 @@ void PathFinder::addConvexHull(std::vector<FVector> &vec){
 
     }
 
+    //NEW:
+    //new create polygons
+    //PathFinder::ConvexPolygon *polygon = new PathFinder::ConvexPolygon(outNodes);
+    //polygonstmp.push_back(polygon);
+
 
     //alle sofort in graphen ballern
     for (int i = 0; i < outNodes.size(); i++){
         if(outNodes.at(i) != nullptr){
             addNode(outNodes.at(i));
 
+            //NEW:
+            //convex hull index setzten für faster path on hull
+            //outNodes.at(i)->hullindex = i;
         }
     }
 }
@@ -1222,37 +1241,81 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
                  * EAsyncTraceType::Single: Use this for a single line trace (just one raycast).
                  * EAsyncTraceType::Multi: Use this if you want to collect multiple hits along the ray
                  */
-
+                
+                /*
+                //a delegate is in essence a call back function
                 FTraceDelegate MyTraceDelegate;
                 //remember: [capture clause] () {}
-                MyTraceDelegate.BindLambda([a, b](const FTraceHandle& TraceHandle, FTraceDatum& TraceData)
-                {
+                MyTraceDelegate.BindLambda([a, b](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
                     // Lambda logic for handling the trace result
                     bool bHit = TraceData.OutHits.Num() > 0;
                     if(bHit){
                         a->addTangentialNeighbor(b);
                         b->addTangentialNeighbor(a);
                     }
-                    
-                });
+                    DebugHelper::showScreenMessage("async trace made");
+                });*/
 
-                // Now pass the delegate by reference
-                worldPointer->AsyncLineTraceByChannel(
-                    EAsyncTraceType::Single,    // Or Multi, depending on what you need
-                    start,                      // Start point (FVector)
-                    end,                        // End point (FVector)
-                    ECC_Visibility,             // Collision channel
-                    Params,            // Collision query parameters
-                    FCollisionResponseParams(), // Response parameters
-                    &MyTraceDelegate
-                );
-                
+                FTraceDelegate *MyTraceDelegate = requestDelegate(a, b);
+                if(MyTraceDelegate != nullptr){
+                    // Now pass the delegate by reference
+                    worldPointer->AsyncLineTraceByChannel(
+                        EAsyncTraceType::Single,    // Or Multi, depending on what you need
+                        start,                      // Start point (FVector)
+                        end,                        // End point (FVector)
+                        ECC_Visibility,             // Collision channel
+                        Params,            // Collision query parameters
+                        FCollisionResponseParams(), // Response parameters
+                        //&MyTraceDelegate //call back 
+                        MyTraceDelegate //call back 
+                    );
+                }else{
+                    DebugHelper::showScreenMessage("issue with delegate occured");
+                }
+
                 
             }
         }
     }
 }
 
+
+
+
+FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
+
+    FTraceDelegate *delegate  = nullptr;
+    if (released.size() > 0)
+    {
+        delegate = released.back();
+        released.pop_back();
+    }
+    if(delegate == nullptr){
+        delegate = new FTraceDelegate();
+    }
+
+    delegate->BindLambda([a, b, delegate](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
+        // Lambda logic for handling the trace result
+        bool bHit = TraceData.OutHits.Num() > 0;
+        if(bHit){
+            a->addTangentialNeighbor(b);
+            b->addTangentialNeighbor(a);
+        }
+        //DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
+
+        if(PathFinder *i = PathFinder::instance()){
+            i->freeDelegate(delegate);
+        }        
+    });
+    return delegate;
+}
+
+void PathFinder::freeDelegate(FTraceDelegate *d){
+    if(d != nullptr){
+        //DebugHelper::showScreenMessage("freed delegate", FColor::Green);
+        released.push_back(d);
+    }
+}
 
 
 
@@ -1447,6 +1510,7 @@ bool PathFinder::passTangentailCheck(Node *a, Node *b){
 
     return true; //no neighbors, check raycasts
 }
+
 
 
 

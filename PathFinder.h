@@ -185,10 +185,7 @@ private:
 
 	bool isCloseAndTooVertical(Node *a, Node *b);
 
-
-
-
-
+	int traceCount;
 
 	static constexpr bool PREBUILD_EDGES_ENABLED = true; //enable disable!
 	static constexpr bool ASYNC_EDGE_PREBUILDING = true;
@@ -203,4 +200,29 @@ private:
 
 	bool isInBounds(FVector &a, FVector &b, PathFinder::Node *check);
 
+	/*
+	class ConvexPolygon{
+		public:
+			ConvexPolygon(std::vector<PathFinder::Node *> &nodes);
+			~ConvexPolygon();
+			std::vector<PathFinder::Node *> nodes;
+			//2D vector for nodes which can see each other in one row
+			//std::vector<std::vector<PathFinder::Node *>> nodes
+			std::vector<FVector> findFastPathOnHull(Node *a, Node *b);
+	};
+
+
+	
+	
+
+	std::vector<PathFinder::ConvexPolygon *> polygonstmp; //will store polygons here for now
+	*/
+
+	std::vector<FTraceDelegate *> released;
+	FTraceDelegate *requestDelegate(Node *a, Node *b);
+
+
+
+public:
+	void freeDelegate(FTraceDelegate *d);
 };
