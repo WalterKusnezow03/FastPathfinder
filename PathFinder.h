@@ -33,7 +33,7 @@ public:
 
 	static PathFinder *instance(UWorld *worldIn);
 	static PathFinder *instance();
-	//static void deleteInstance();
+	static void deleteInstance();
 
 	void clear(); //clears ALL NODES
 
@@ -103,6 +103,7 @@ private:
 	class UWorld *worldPointer;
 
 	static class PathFinder *pathFinderInstance;
+	
 	static int countNodes;
 
 	void screenMessage(int s);
@@ -218,8 +219,10 @@ private:
 	std::vector<PathFinder::ConvexPolygon *> polygonstmp; //will store polygons here for now
 	*/
 
+
+
 	FCriticalSection delegate_CriticalSection_a;
-	//FCriticalSection delegate_CriticalSection_b;
+	
 	std::vector<FTraceDelegate *> released;
 	FTraceDelegate *requestDelegate(Node *a, Node *b);
 

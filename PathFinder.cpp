@@ -32,7 +32,7 @@ PathFinder::PathFinder(UWorld *worldIn)
 PathFinder::~PathFinder()
 {
     worldPointer = nullptr;
-    pathFinderInstance = nullptr;
+    //pathFinderInstance = nullptr;
     delete (TopRight); 
     delete (BottomRight); 
     delete (BottomLeft); 
@@ -42,6 +42,7 @@ PathFinder::~PathFinder()
 }
 
 PathFinder* PathFinder::pathFinderInstance = nullptr; //very imporntant, do not delete!
+
 int PathFinder::countNodes = 0;
 
 PathFinder::Node::Node(FVector posIn){
@@ -153,7 +154,7 @@ PathFinder* PathFinder::instance(UWorld *worldIn){
     if(worldIn == nullptr){
         return nullptr;
     }
-
+    
     if(pathFinderInstance == nullptr){
         pathFinderInstance = new PathFinder(worldIn);
     }
@@ -166,6 +167,15 @@ PathFinder* PathFinder::instance(UWorld *worldIn){
 /// @return
 PathFinder* PathFinder::instance(){
     return pathFinderInstance;
+}
+
+/// @brief only call this method to delete the path finder
+void PathFinder::deleteInstance(){
+    if(pathFinderInstance != nullptr){
+        delete pathFinderInstance;
+        pathFinderInstance = nullptr;
+    }
+    
 }
 
 //not recommended
@@ -1329,11 +1339,11 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
     return nullptr;
 }
 
+/// @brief synchronously releases the ftrace delegate for re usal
+/// @param d ftracedelegate to realease
 void PathFinder::freeDelegate(FTraceDelegate *d){
     if(d != nullptr){
         FScopeLock Lock(&delegate_CriticalSection_a);
-        //FString count = FString(TEXT("delegates %d"), released.size());
-        //DebugHelper::showScreenMessage(count, FColor::Green);
         released.push_back(d);
     }
 }
