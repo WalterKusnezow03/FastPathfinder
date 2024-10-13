@@ -16,17 +16,23 @@ priorityQueue::~priorityQueue()
 void priorityQueue::add(PathFinder::Node *node){
     if(node != nullptr){
         //(am letzten index einfügen, bubble up)
-        //solange das über mir grösser ist, swap
+        // solange das über mir grösser ist, swap
 
         if(indexMap.find(node) != indexMap.end()){
             int index = indexMap[node];
             bubbleUpfrom(index); //refresh
-        }else{
+            DebugHelper::showScreenMessage("udpate node", node->fx, FColor::Blue);
+        }
+        else
+        {
+            DebugHelper::showScreenMessage("add node", node->fx, FColor::Blue);
             nodes.push_back(node);
+            indexMap[node] = nodes.size() - 1; //add with new index
             bubbleUpfrom(nodes.size() - 1);
         }
-
     }
+
+    show();
 }
 
 void priorityQueue::bubbleUpfrom(int index){
@@ -84,7 +90,7 @@ PathFinder::Node *priorityQueue::popLowestFx(){
         downheap();
 
         if(front != nullptr){
-            //DebugHelper::showScreenMessage("popped fx", front->fx);
+            DebugHelper::showScreenMessage("popped fx", front->fx);
         }
 
         return front;
@@ -160,3 +166,23 @@ bool priorityQueue::hasNodes(){
 }
 
 
+
+
+void priorityQueue::show(){
+    if(hasNodes()){
+        FString output = TEXT("nodes: \n");
+        FString breakN = TEXT(" - ");
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            PathFinder::Node *n = nodes.at(i);
+            if(n != nullptr){
+                output += FString::Printf(TEXT("%.2f"), nodes.at(i)->fx);
+                output += breakN;
+            }
+        }
+
+        DebugHelper::showScreenMessage(output, FColor::Green);
+    }else{
+        DebugHelper::showScreenMessage("no nodes in queue! ", FColor::Green);
+    }
+}

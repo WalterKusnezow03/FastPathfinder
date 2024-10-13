@@ -50,7 +50,7 @@ PathFinder::Node::Node(FVector posIn){
     fx = gx;
     pos = posIn;
     camefrom = nullptr;
-    closedFlag = true;
+    closedFlag = false;
     nA = nullptr;
     nB = nullptr;
 }
@@ -178,14 +178,6 @@ void PathFinder::deleteInstance(){
     
 }
 
-//not recommended
-/*
-void PathFinder::deleteInstance(){
-    if(pathFinderInstance != nullptr){
-        delete pathFinderInstance;
-        pathFinderInstance = nullptr;
-    }
-}*/
 
 
 
@@ -399,10 +391,34 @@ void PathFinder::debugCountNodes(){
     FString string = FString::Printf(TEXT("collected COUNT %d"), PathFinder::countNodes);
     FString string2 = FString::Printf(TEXT("collected SUBGRAPH %d"), nodes.size());
 
-    if (GEngine)
+    if (GEngine && false)
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, string);
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, string2);
+    }
+
+
+
+    //draw nodes
+    for (int i = 0; i < nodes.size(); i++){
+        //each neighbor, draw line
+        PathFinder::Node *current = nodes.at(i);
+        if (current != nullptr)
+        {
+            for (int j = 0; j < current->visible_tangential_Neighbors.size(); j++){
+                PathFinder::Node *currNeighbor = current->visible_tangential_Neighbors.at(j);
+                if(currNeighbor != nullptr){
+                    DebugHelper::showLineBetween(
+                        worldPointer,
+                        current->pos,
+                        currNeighbor->pos,
+                        FColor::Red,
+                        100.0f
+                    );
+
+                }
+            }
+        }
     }
 }
 
@@ -597,12 +613,12 @@ bool PathFinder::reached(Node *a, Node *b){
     //neighbor
 
     //distance
-    if(FVector::Dist(a->pos, b->pos) <= 200){
+    if(FVector::Dist(a->pos, b->pos) <= 500){
         return true;
     }
 
     //can see
-    if (canSee(a->pos, b->pos)){
+    if (PREBUILD_EDGES_ENABLED == false && canSee(a->pos, b->pos)){
         return true;
     }
     return false;
@@ -660,48 +676,11 @@ bool PathFinder::canSeeTangential(PathFinder::Node *A, PathFinder::Node*B){
             return true;
         }
 
-        
-
-        /*
-        FVector dir = (B->pos - Start).GetSafeNormal();
-        Start += dir * 20; //offset for entity raycast failure
-
-        FHitResult HitResult;
-		FCollisionQueryParams Params;
-		//Params.AddIgnoredActor(this); // Ignore the character itself
-
-		bool bHit = worldPointer->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params);
-
-		// If the raycast hit something, log the hit actor's name
-		if (bHit)
-		{   
-            //ein punkt weil hier ein value bzw ref call!, merken, wichtig!
-            AActor *actor = HitResult.GetActor();
-            if(actor != nullptr){
-				
-				
-
-                //casting:
-                //DT* name = Cast<DT>(actor);
-				IDamageinterface* entity = Cast<IDamageinterface>(actor);
-				if (entity){
-                    float hitDistance = FVector::Dist(HitResult.ImpactPoint, End);
-                    if(hitDistance <= 100){
-                        return true; //ignore enteties
-                    }
-                }
-            }
-            //default hit: can see FALSE
-            return false;
-        }else{
-            return true; //no hit: can see true
-        }*/
     }
     return false; //issue: can see false.
 }
 
 /// @brief checks with a simple raycasts if nodes can see each other
-/// WILL AUTOMATICALLY INCOPERATE TANGENTIAL CHECKS TOO FOR MINIMAL PATH
 /// @param Start start node
 /// @param End end node
 /// @return edge of interest to pass / existent, efficent
@@ -1017,6 +996,7 @@ std::vector<PathFinder::Node*> &PathFinder::Chunk::getNodes(){
 /// @return returns the closest node near by
 PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
     
+    //add the node if needed
     if(nodes.size() <= 0 && PathFinder::PREBUILD_EDGES_ENABLED == false){
 
         PathFinder::Node *s = new PathFinder::Node(pos);
@@ -1028,24 +1008,55 @@ PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
         return nullptr;
     }
 
-    float closest = std::numeric_limits<float>::max();
-    PathFinder::Node *closestNode = nodes.at(0);
+    //find nodes default
+    if(!PREBUILD_EDGES_ENABLED){
+        float closest = std::numeric_limits<float>::max();
+        PathFinder::Node *closestNode = nodes.at(0);
 
-    for (int i = 0; i < nodes.size(); i++)
-    {
-        PathFinder::Node *current = nodes.at(i);
-        if (current != nullptr)
+        for (int i = 0; i < nodes.size(); i++)
         {
+            PathFinder::Node *current = nodes.at(i);
+            if (current != nullptr)
+            {
 
-            float Difference = FVector::Dist(pos, current->pos);
+                float Difference = FVector::Dist(pos, current->pos);
 
-            if(Difference < closest){
-                closest = Difference;
-                closestNode = current;
+                if(Difference < closest){
+                    closest = Difference;
+                    closestNode = current;
+                }
             }
         }
+        return closestNode;
     }
-    return closestNode;
+    
+
+
+
+    if(PREBUILD_EDGES_ENABLED){
+        float dist = std::numeric_limits<float>::max();
+        //std::vector<PathFinder::Node *> markedForRemoval;
+        PathFinder::Node *closestNode = nullptr;
+        for (int i = 0; i < nodes.size(); i++){
+            PathFinder::Node *current = nodes[i];
+            if(current != nullptr){
+
+               
+                if(current->hasAnyNeighbors()){ //any including convex hull or visible neighbors
+                    float Difference = FVector::Dist(pos, current->pos);
+                    if(Difference < dist){
+                        dist = Difference;
+                        closestNode = current;
+                    }
+                }
+
+                
+            }
+        }
+        return closestNode;
+    }
+
+    
 }
 
 
@@ -1118,9 +1129,15 @@ bool PathFinder::Node::isClosed(){
     return closedFlag;
 }
 
-
+/// @brief returns if has convex hull neighbors
+/// @return 
 bool PathFinder::Node::hasNeighbors(){
     return nA != nullptr && nB != nullptr;
+}
+
+bool PathFinder::Node::hasAnyNeighbors(){
+    bool hasN = hasNeighbors();
+    return hasN || visible_tangential_Neighbors.size() > 0;
 }
 
 /// @brief will set the a neighbor and also add the other convex node to tangential neighbors
@@ -1181,7 +1198,7 @@ void PathFinder::connect(Node *node){
     if(node != nullptr && PathFinder::PREBUILD_EDGES_ENABLED){
 
         //find min max x and y for distance
-        int max_to_chunks = PREBUILD_MAXDISTANCE / PathFinder::CHUNKSIZE;
+    
         int lowerX = node->pos.X - PREBUILD_MAXDISTANCE;
         int lowerY = node->pos.Y - PREBUILD_MAXDISTANCE;
         int higherX = node->pos.X + PREBUILD_MAXDISTANCE;
@@ -1259,19 +1276,6 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
                  * EAsyncTraceType::Multi: Use this if you want to collect multiple hits along the ray
                  */
                 
-                /*
-                //a delegate is in essence a call back function
-                FTraceDelegate MyTraceDelegate;
-                //remember: [capture clause] () {}
-                MyTraceDelegate.BindLambda([a, b](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
-                    // Lambda logic for handling the trace result
-                    bool bHit = TraceData.OutHits.Num() > 0;
-                    if(!bHit){
-                        a->addTangentialNeighbor(b);
-                        b->addTangentialNeighbor(a);
-                    }
-                    DebugHelper::showScreenMessage("async trace made");
-                });*/
 
                 FTraceDelegate *MyTraceDelegate = requestDelegate(a, b);
                 if(MyTraceDelegate != nullptr){
@@ -1317,16 +1321,42 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
             delegate = new FTraceDelegate();
         }
         if(delegate != nullptr){
-            delegate->BindLambda([a, b, delegate](const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
+            delegate->BindLambda(
+                [a, b, delegate, this]
+                (const FTraceHandle &TraceHandle, FTraceDatum &TraceData){
+
                 // Lambda logic for handling the trace result
                 bool bHit = TraceData.OutHits.Num() > 0;
+
+                if(bHit){
+                    FHitResult hitP = TraceData.OutHits[0];
+                    FVector hitPos = hitP.ImpactPoint;
+                    if(FVector::Dist(hitPos, b->pos) <= 100){
+                        bHit = false; //testing needed
+                        //DebugHelper::showScreenMessage("async trace false positive", FColor::Purple);
+                    }
+
+                    
+                }
 
                 //no hit, can see.
                 if(!bHit){
                     a->addTangentialNeighbor(b);
                     b->addTangentialNeighbor(a);
+
+                    DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
+
+                    if(this->worldPointer && false){
+                        DebugHelper::showLineBetween(
+                            worldPointer,
+                            a->pos,
+                            b->pos,
+                            FColor::Blue
+                        );
+                    }
                 }
-                //DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
+
+                
 
                 if(PathFinder *i = PathFinder::instance()){
                     i->freeDelegate(delegate);
@@ -1343,6 +1373,8 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
 /// @param d ftracedelegate to realease
 void PathFinder::freeDelegate(FTraceDelegate *d){
     if(d != nullptr){
+
+        d->Unbind();
         FScopeLock Lock(&delegate_CriticalSection_a);
         released.push_back(d);
     }
@@ -1377,6 +1409,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
 
 
     //bounding box for traversed nodes
+    /*
     FVector center = (start->pos + end->pos) / 2;
     int lowerX = std::min(start->pos.X, end->pos.X);
     int lowerY = std::min(start->pos.Y, end->pos.Y);
@@ -1385,6 +1418,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
 
     FVector lower(lowerX, lowerY, 0);
     FVector higher(higherX, higherY, 0);
+    */
 
     //int boundingBoxIncreaseFrac = 2;
     //lower += (center - lower) * boundingBoxIncreaseFrac; // AB = B - A
@@ -1398,10 +1432,27 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
 
     while(open.hasNodes()){
         PathFinder::Node *current = open.popLowestFx();
+        
+
         if (current != nullptr)
         {
-            markedForCleanUp.push_back(current); //dont forget to push back for cleaning up later
-            if (reached(current, end))
+            //debugDraw
+            PathFinder::Node *prevNode = current->camefrom;
+            if(prevNode != nullptr){
+                DebugHelper::showLineBetween(
+                    worldPointer,
+                    current->pos,
+                    prevNode->pos,
+                    FColor::Red,
+                    5.0f
+                );
+            }
+
+        
+            markedForCleanUp.push_back(current); // dont forget to push back for cleaning up later
+            
+            if (current == end)
+            //if (reached(current, end))
             {
 
                 std::vector<FVector> outputPath = constructPath(end);
@@ -1414,25 +1465,26 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                         n->reset();
                     }
                 }
-                //DebugHelper::showScreenMessage("FOUND PATH PREBUILD!", FColor::Purple);
+                DebugHelper::showScreenMessage("Path Found", FColor::Purple);
                 return outputPath;
             }
 
             //not opened yet
             current->close(); //close node
+
+            DebugHelper::showScreenMessage("neighbors", current->visible_tangential_Neighbors.size(), FColor::Red);
+            
             //traverse NOT opened neighbors and add to open if not added yet (will be handeld by queue automatically)
             for (int i = 0; i < current->visible_tangential_Neighbors.size(); i++){
                 Node *neighbor = current->visible_tangential_Neighbors[i];
                 if(neighbor != nullptr){
-                    if(
-                        !neighbor->isClosed() 
-                        //&& isInBounds(lower, higher, neighbor)
-                    ){ //open only if not closed, can see, prebuild edges
+                    if(!neighbor->isClosed()){ //open only if not closed
 
-                        //add here tangential check later!
                         float gxNew = current->gx + distance(current->pos, neighbor->pos);
+                        DebugHelper::showScreenMessage("try gx ", gxNew, FColor::Purple);
+                        DebugHelper::showScreenMessage("compare to gx ", neighbor->gx, FColor::Purple);
                         if(gxNew < neighbor->gx){
-                            
+                            DebugHelper::showScreenMessage("update gx ", gxNew, FColor::Green);
                             float hxEnd = distance(neighbor->pos, end->pos);
                             neighbor->updateCameFrom(gxNew, hxEnd, *current);
                         }
@@ -1441,6 +1493,8 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
 
                         //even if a node wasnt the lowest it must be cleaned later!
                         markedForCleanUp.push_back(neighbor);
+                    }else{
+                        DebugHelper::showScreenMessage("is closed", FColor::Purple);
                     }
                 }
             }
@@ -1530,21 +1584,23 @@ bool PathFinder::passTangentailCheck(Node *a, Node *b){
 
 
 
-            /*
+            
             if(dirAB_ok && dirBA_ok){
                 if(worldPointer){
-                    FVector up(0, 0, 100);
-                    DebugHelper::showLineBetween(worldPointer, a->pos, (a->pos + up), FColor::Red);
-                    DebugHelper::showLineBetween(worldPointer, b->pos, (b->pos + up), FColor::Red);
+                    //DebugHelper::showLineBetween(worldPointer, a->pos, b->pos, FColor::Green, 100.0f);
                 }
-            }*/
+            }
 
             return dirAB_ok && dirBA_ok;
         }
+
+        if(worldPointer){
+            DebugHelper::showLineBetween(worldPointer, a->pos, b->pos, FColor::Yellow, 100.0f);
+        }
         return true; //if is not part of a convexx hull, true by default
     }
-
-    return true; //no neighbors, check raycasts
+    
+    return false; //issue 
 }
 
 

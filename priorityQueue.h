@@ -19,6 +19,8 @@ public:
 
 	bool hasNodes();
 
+	void show();
+
 private:
 	std::vector<PathFinder::Node *> nodes;
 	void downheap();

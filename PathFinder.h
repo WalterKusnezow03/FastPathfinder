@@ -74,7 +74,8 @@ public:
 			PathFinder::Node *nA = nullptr;
 			PathFinder::Node *nB = nullptr;
 
-			bool hasNeighbors();
+			bool hasNeighbors(); //convex hull neighbors
+			bool hasAnyNeighbors(); //any visible neighbors 
 
 			std::vector<Node *> visible_tangential_Neighbors;
 
