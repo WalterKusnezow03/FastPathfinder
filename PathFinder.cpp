@@ -291,12 +291,6 @@ void PathFinder::addNewNode(FVector a){
         q->add(a);
         
         
-        //debug testing for checking if nodes were added, works properly
-        /*
-        PathFinder::Node *tryFind = findNode(a);
-        if(tryFind != nullptr){
-            showPos(tryFind->pos, FColor::Purple);
-        }*/
         
     }
 }
@@ -341,15 +335,17 @@ PathFinder::Quadrant* PathFinder::askforQuadrant(int xIndex, int yIndex){
 /// @param node 
 /// @return 
 PathFinder::Node* PathFinder::findNode(FVector node){
-    int x = node.X;
-    int y = node.Y;
+    int x = (int) node.X;
+    int y = (int) node.Y;
     PathFinder::Quadrant *q = askforQuadrant(x, y);
     if(q != nullptr){
         PathFinder::Node *nodeFound = q->findNode(node);
         if(nodeFound != nullptr){
+            DebugHelper::showScreenMessage("node found path finder", FColor::Green);
             return nodeFound;
         }
     }
+    DebugHelper::showScreenMessage("node not found path finder", FColor::Red);
     return nullptr;
 }
 
@@ -430,29 +426,38 @@ void PathFinder::debugCountNodes(){
 /// @return a path or an emtpy vector if no path was found
 std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
 
-    
-    PathFinder::Node *start = findNode(a);
-    PathFinder::Node *end = findNode(b);
+    //check if is last path
+    if(prevPath.size() > 0){
+        FVector s = prevPath.front();
+        FVector e = prevPath.back();
+        if(
+            FVector::Dist(s, a) <= 500 && 
+            FVector::Dist(e, b) <= 500
+        )
+        //if (s == start->pos && e == end->pos)
+        {
+            return prevPath;
+        }
+    }
+
+    PathFinder::Node *start = nullptr;
+    PathFinder::Node *end = nullptr;
+    start = findNode(a);
+    if(start == nullptr){
+        DebugHelper::showScreenMessage("START NODE NOT FOUND", FColor::Red);
+    }
+
+    end = findNode(b);
+    if(end == nullptr){
+        DebugHelper::showScreenMessage("END NODE NOT FOUND", FColor::Red);
+    }
+
 
 
     if(start != nullptr && end != nullptr){
         //DebugHelper::showScreenMessage("ask path print 2");
 
-        //DebugHelper::showScreenMessage("try find path");
-
-        //check if is last path
-        if(prevPath.size() > 0){
-            FVector s = prevPath.front();
-            FVector e = prevPath.back();
-            if(
-                FVector::Dist(s, start->pos) <= 300 && 
-                FVector::Dist(e, end->pos) <= 300
-            )
-            //if (s == start->pos && e == end->pos)
-            {
-                return prevPath;
-            }
-        }
+        // DebugHelper::showScreenMessage("try find path");
 
         //PREBUILD EDGES
         if(PREBUILD_EDGES_ENABLED){
@@ -806,8 +811,10 @@ void PathFinder::Quadrant::add(Node *n){
 
 
 
-
-
+void PathFinder::draw(FVector &pos){
+    FVector up = pos + FVector(0, 0, 10000);
+    DebugHelper::showLineBetween(worldPointer, pos, up, FColor::Red, 5.0f);
+}
 
 //finds a node from a quadrant
 PathFinder::Node* PathFinder::Quadrant::findNode(FVector pos){
@@ -816,9 +823,14 @@ PathFinder::Node* PathFinder::Quadrant::findNode(FVector pos){
 
     if(map.size() > x1 && map.at(x1).size() > y1){
         if(map.at(x1).at(y1) != nullptr){
-            return map.at(x1).at(y1)->findNode(pos);
+            PathFinder::Node* n = map.at(x1).at(y1)->findNode(pos);
+            if(n != nullptr){
+                DebugHelper::showScreenMessage("quadrant found node return!", FColor::Green);
+                return n;
+            }
         }
     }
+    DebugHelper::showScreenMessage("quadrant not found node return!", FColor::Red);
     return nullptr;
 }
 
@@ -995,13 +1007,25 @@ std::vector<PathFinder::Node*> &PathFinder::Chunk::getNodes(){
 /// @param pos position of the targetet node
 /// @return returns the closest node near by
 PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
-    
+
     //add the node if needed
     if(nodes.size() <= 0 && PathFinder::PREBUILD_EDGES_ENABLED == false){
-
         PathFinder::Node *s = new PathFinder::Node(pos);
         nodes.push_back(s);
         return s;
+    }
+    
+    //test add node
+    if(nodes.size() <= 0 && PathFinder::PREBUILD_EDGES_ENABLED){
+        PathFinder::Node *s = new PathFinder::Node(pos);
+        nodes.push_back(s);
+        if(PathFinder *p = PathFinder::instance()){
+            if(s != nullptr){
+                p->connect(s);
+            }
+            
+        }
+        return nullptr;
     }
 
     if(nodes.size() <= 0){
@@ -1033,6 +1057,15 @@ PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
 
 
 
+
+    //debug draw fucking chunk positionb
+    FVector debugPos = pos;
+    PathFinder *p = PathFinder::instance();
+    if (p != nullptr)
+    {
+        //p->draw(debugPos);
+    }
+
     if(PREBUILD_EDGES_ENABLED){
         float dist = std::numeric_limits<float>::max();
         //std::vector<PathFinder::Node *> markedForRemoval;
@@ -1046,13 +1079,25 @@ PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
                     float Difference = FVector::Dist(pos, current->pos);
                     if(Difference < dist){
                         dist = Difference;
-                        closestNode = current;
+                        closestNode = current;   
                     }
                 }
 
                 
+
+                
             }
         }
+        if (p != nullptr && closestNode != nullptr)
+        {
+            DebugHelper::showScreenMessage("closest node found", FColor::Green);
+            p->draw(closestNode->pos);
+        }else{
+            FString issueString = "Issue, neightbor count";
+            issueString += FString::Printf(TEXT(" %d"), (int)nodes.size());
+            DebugHelper::showScreenMessage(issueString, FColor::Red);
+        }
+
         return closestNode;
     }
 
@@ -1472,7 +1517,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
             //not opened yet
             current->close(); //close node
 
-            DebugHelper::showScreenMessage("neighbors", current->visible_tangential_Neighbors.size(), FColor::Red);
+            //DebugHelper::showScreenMessage("neighbors", current->visible_tangential_Neighbors.size(), FColor::Red);
             
             //traverse NOT opened neighbors and add to open if not added yet (will be handeld by queue automatically)
             for (int i = 0; i < current->visible_tangential_Neighbors.size(); i++){
@@ -1481,10 +1526,10 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                     if(!neighbor->isClosed()){ //open only if not closed
 
                         float gxNew = current->gx + distance(current->pos, neighbor->pos);
-                        DebugHelper::showScreenMessage("try gx ", gxNew, FColor::Purple);
-                        DebugHelper::showScreenMessage("compare to gx ", neighbor->gx, FColor::Purple);
+                        //DebugHelper::showScreenMessage("try gx ", gxNew, FColor::Purple);
+                        //DebugHelper::showScreenMessage("compare to gx ", neighbor->gx, FColor::Purple);
                         if(gxNew < neighbor->gx){
-                            DebugHelper::showScreenMessage("update gx ", gxNew, FColor::Green);
+                            //DebugHelper::showScreenMessage("update gx ", gxNew, FColor::Green);
                             float hxEnd = distance(neighbor->pos, end->pos);
                             neighbor->updateCameFrom(gxNew, hxEnd, *current);
                         }
@@ -1494,7 +1539,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
                         //even if a node wasnt the lowest it must be cleaned later!
                         markedForCleanUp.push_back(neighbor);
                     }else{
-                        DebugHelper::showScreenMessage("is closed", FColor::Purple);
+                        //DebugHelper::showScreenMessage("is closed", FColor::Purple);
                     }
                 }
             }

@@ -91,6 +91,8 @@ public:
 	
 	void debugCountNodes();
 
+	void draw(FVector &pos);
+
 private:
 	std::vector<FVector> prevPath;
 

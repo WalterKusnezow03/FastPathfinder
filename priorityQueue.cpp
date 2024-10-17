@@ -21,18 +21,18 @@ void priorityQueue::add(PathFinder::Node *node){
         if(indexMap.find(node) != indexMap.end()){
             int index = indexMap[node];
             bubbleUpfrom(index); //refresh
-            DebugHelper::showScreenMessage("udpate node", node->fx, FColor::Blue);
+            //DebugHelper::showScreenMessage("udpate node", node->fx, FColor::Blue);
         }
         else
         {
-            DebugHelper::showScreenMessage("add node", node->fx, FColor::Blue);
+            //DebugHelper::showScreenMessage("add node", node->fx, FColor::Blue);
             nodes.push_back(node);
             indexMap[node] = nodes.size() - 1; //add with new index
             bubbleUpfrom(nodes.size() - 1);
         }
     }
 
-    show();
+    //show();
 }
 
 void priorityQueue::bubbleUpfrom(int index){
