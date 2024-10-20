@@ -295,13 +295,15 @@ void EdgeCollector::getEdgesFromSingleMesh(
     ComputeConvexHull(currentEdges);
 
     //causes issues currently
-    //CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
+    CleanUpParalellEdges(currentEdges); //convex hull needed! -- this is not nesecarry because the hull is convex!
 
 
     //caluclate raycast hits and apply to all edges aligning them properly
+    scaleUpConvexHullShape(currentEdges);
     collectRaycasts(currentEdges, worldIn);
     showEdges(currentEdges, worldIn); //debug
 
+    //feed to nav mesh
     std::vector<FVector> toPosVec;
     for (int i = 0; i < currentEdges.size(); i++){
         toPosVec.push_back(currentEdges.at(i).bottom);
@@ -444,6 +446,54 @@ void EdgeCollector::showLine(FVector e, FVector g){
 
 
 
+void EdgeCollector::scaleUpConvexHullShape(std::vector<edgeData> &edges){
+    std::vector<FVector> apply;
+    int pushAwaycm = 200;
+    //SCALE UP SHAPE
+    for (int i = 0; i < edges.size(); i++){
+        
+        //get edges (prev, current, next)
+        edgeData *prev = &edges.at(i);
+        if(i == 0){
+            prev = &edges.back();
+        }
+        else
+        {
+            prev = &edges.at(i - 1);
+        }
+
+        edgeData *current = &edges.at(i);
+        edgeData *next = &edges.at(i);
+        if(i == edges.size() - 1){
+            next = &edges.front();
+        }
+        else
+        {
+            next = &edges.at(i + 1);
+        }
+
+        //calculate connect, add up, invert * -1, normalize, scale
+        FVector dirA = prev->top - current->top; // AB = B - A
+        FVector dirB = next->top - current->top;
+        dirA.Z = 0;
+        dirB.Z = 0;
+        FVector pushOutDirectionScaled = (dirA + dirB).GetSafeNormal() * -1 * pushAwaycm; //get half weight
+        apply.push_back(pushOutDirectionScaled);
+    }
+
+    //override data after calculating to keep pushout consistent and not immidiatly maniupulating
+    for (int i = 0; i < apply.size(); i++){
+        if(i < edges.size()){
+            FVector applied = apply.at(i);
+            edges.at(i).top += applied;
+            edges.at(i).bottom += applied;
+        }
+    }
+}
+
+
+
+
 
 
 
@@ -453,10 +503,10 @@ void EdgeCollector::showLine(FVector e, FVector g){
 /// @param world 
 void EdgeCollector::collectRaycasts(std::vector<edgeData> &edges, UWorld *world){
 
-
+    /*
     std::vector<FVector> apply;
     int pushAwaycm = 200;
-    // new approach: moving away from neighbors
+    //SCALE UP SHAPE
     for (int i = 0; i < edges.size(); i++){
 
         edgeData *prev = &edges.at(i);
@@ -495,6 +545,7 @@ void EdgeCollector::collectRaycasts(std::vector<edgeData> &edges, UWorld *world)
             edges.at(i).bottom += applied;
         }
     }
+    */
 
     // create raycasts
     for (int i = 0; i < edges.size(); i++)
@@ -511,16 +562,16 @@ void EdgeCollector::collectRaycast(edgeData &edge, UWorld *world){
         FVector Start = edge.top;
         //Start.Z += 500;
         FVector End = edge.bottom;
-        End.Z -= 500;
+        End.Z -= 200;
 
         FHitResult HitResult;
 		FCollisionQueryParams Params;
-		//Params.AddIgnoredActor(this); // Ignore the character itself
 
+        
 		bool bHit = world->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params);
 
 
-		// If the raycast hit something, log the hit actor's name
+		
 		if (bHit)
 		{
             
@@ -597,7 +648,7 @@ bool EdgeCollector::xyExtension(FVector &a, FVector &b, FVector &c){
     return false;
 }
 float EdgeCollector::xyDotProduct(FVector &A, FVector &B){
-    return (A.X * B.X) + (A.Y + B.Y);
+    return (A.X * B.X) + (A.Y * B.Y);
 }
 
 

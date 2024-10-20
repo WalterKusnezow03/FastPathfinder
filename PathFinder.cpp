@@ -435,9 +435,7 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
         if(
             FVector::Dist(s, a) <= 500 && 
             FVector::Dist(e, b) <= 500
-        )
-        //if (s == start->pos && e == end->pos)
-        {
+        ){
             return prevPath;
         }
     }
@@ -457,14 +455,10 @@ std::vector<FVector> PathFinder::getPath(FVector a, FVector b){
 
 
     if(start != nullptr && end != nullptr){
-        //DebugHelper::showScreenMessage("ask path print 2");
-
-        // DebugHelper::showScreenMessage("try find path");
-
+        
         //PREBUILD EDGES
         if(PREBUILD_EDGES_ENABLED){
-            //DebugHelper::showScreenMessage("ask path print 3");
-            showPos(start->pos, FColor::Green);
+            showPos(start->pos, FColor::Blue);
             showPos(end->pos, FColor::Purple);
             return findPath_prebuildEdges(start, end);
         }
@@ -1406,7 +1400,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         std::vector<FVector> o;
         return o;
     }
-    DebugHelper::showScreenMessage("ask path");
+    //DebugHelper::showScreenMessage("ask path");
     start->camefrom = nullptr;
     start->closedFlag = false;
     start->gx = 0;
@@ -1459,9 +1453,7 @@ std::vector<FVector> PathFinder::findPath_prebuildEdges(
         
             markedForCleanUp.push_back(current); // dont forget to push back for cleaning up later
             
-            if (current == end)
-            //if (reached(current, end))
-            {
+            if (current == end){
 
                 std::vector<FVector> outputPath = constructPath(end);
                 

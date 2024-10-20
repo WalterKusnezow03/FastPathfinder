@@ -17,7 +17,7 @@ public:
 	EdgeCollector();
 	~EdgeCollector();
 private:
-	static const int GROUND_OFFSET = 70;
+	static const int GROUND_OFFSET = 50;
 	static const bool DEBUG_DRAW_EDGES = false;
 
 	class edgeData
@@ -70,6 +70,7 @@ private:
 	
 	bool IsClockwise(const edgeData &a, const edgeData &b, const edgeData &c);
 
+	void scaleUpConvexHullShape(std::vector<edgeData> &edges);
 	void collectRaycasts(std::vector<edgeData> &edges, UWorld *world);
 	void collectRaycast(edgeData &edge, UWorld *world);
 
