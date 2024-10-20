@@ -126,6 +126,8 @@ private:
 
 			void clear();
 
+			PathFinder::Node *lateadd(FVector pos);
+
 			// new:
 			//std::vector<PathFinder::ConvexPolygon *> polygons;
 	};

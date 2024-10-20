@@ -344,8 +344,10 @@ PathFinder::Node* PathFinder::findNode(FVector node){
             DebugHelper::showScreenMessage("node found path finder", FColor::Green);
             return nodeFound;
         }
+    }else{
+        DebugHelper::showScreenMessage("QUADRANT IS NULL!!!!!", FColor::Red);
     }
-    DebugHelper::showScreenMessage("node not found path finder", FColor::Red);
+    
     return nullptr;
 }
 
@@ -825,12 +827,12 @@ PathFinder::Node* PathFinder::Quadrant::findNode(FVector pos){
         if(map.at(x1).at(y1) != nullptr){
             PathFinder::Node* n = map.at(x1).at(y1)->findNode(pos);
             if(n != nullptr){
-                DebugHelper::showScreenMessage("quadrant found node return!", FColor::Green);
+                //DebugHelper::showScreenMessage("quadrant found node return!", FColor::Green);
                 return n;
             }
         }
     }
-    DebugHelper::showScreenMessage("quadrant not found node return!", FColor::Red);
+    //DebugHelper::showScreenMessage("quadrant not found node return!", FColor::Red);
     return nullptr;
 }
 
@@ -986,9 +988,12 @@ void PathFinder::Chunk::add(Node *node){
         }
         nodes.push_back(node);
         //connects to all nodes if enabled in header
-        if(PathFinder *p = PathFinder::instance()){
-            p->connect(node);
+        if(PREBUILD_EDGES_ENABLED){
+            if(PathFinder *p = PathFinder::instance()){
+                p->connect(node);
+            }
         }
+        
     }
 }
 
@@ -1008,101 +1013,54 @@ std::vector<PathFinder::Node*> &PathFinder::Chunk::getNodes(){
 /// @return returns the closest node near by
 PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
 
-    //add the node if needed
-    if(nodes.size() <= 0 && PathFinder::PREBUILD_EDGES_ENABLED == false){
-        PathFinder::Node *s = new PathFinder::Node(pos);
-        nodes.push_back(s);
-        return s;
-    }
     
     //test add node
-    if(nodes.size() <= 0 && PathFinder::PREBUILD_EDGES_ENABLED){
-        PathFinder::Node *s = new PathFinder::Node(pos);
-        nodes.push_back(s);
-        if(PathFinder *p = PathFinder::instance()){
-            if(s != nullptr){
-                p->connect(s);
-            }
-            
-        }
-        return nullptr;
-    }
-
     if(nodes.size() <= 0){
-        return nullptr;
+        DebugHelper::showScreenMessage("RETURNED ASYNC CONNECT NODE ", FColor::Yellow);
+        return lateadd(pos);
     }
 
-    //find nodes default
-    if(!PREBUILD_EDGES_ENABLED){
-        float closest = std::numeric_limits<float>::max();
-        PathFinder::Node *closestNode = nodes.at(0);
 
-        for (int i = 0; i < nodes.size(); i++)
-        {
-            PathFinder::Node *current = nodes.at(i);
-            if (current != nullptr)
-            {
-
-                float Difference = FVector::Dist(pos, current->pos);
-
-                if(Difference < closest){
-                    closest = Difference;
-                    closestNode = current;
-                }
-            }
-        }
-        return closestNode;
-    }
-    
-
-
-
-
-    //debug draw fucking chunk positionb
-    FVector debugPos = pos;
-    PathFinder *p = PathFinder::instance();
-    if (p != nullptr)
+    float closest = std::numeric_limits<float>::max();
+    PathFinder::Node *closestNode = nullptr;
+    for (int i = 0; i < nodes.size(); i++)
     {
-        //p->draw(debugPos);
-    }
+        PathFinder::Node *current = nodes.at(i);
+        if (current != nullptr)
+        {
 
-    if(PREBUILD_EDGES_ENABLED){
-        float dist = std::numeric_limits<float>::max();
-        //std::vector<PathFinder::Node *> markedForRemoval;
-        PathFinder::Node *closestNode = nullptr;
-        for (int i = 0; i < nodes.size(); i++){
-            PathFinder::Node *current = nodes[i];
-            if(current != nullptr){
+            float Difference = FVector::Dist(pos, current->pos);
 
-               
-                if(current->hasAnyNeighbors()){ //any including convex hull or visible neighbors
-                    float Difference = FVector::Dist(pos, current->pos);
-                    if(Difference < dist){
-                        dist = Difference;
-                        closestNode = current;   
-                    }
-                }
-
-                
-
-                
+            if(Difference < closest){
+                closest = Difference;
+                closestNode = current;
             }
         }
-        if (p != nullptr && closestNode != nullptr)
-        {
-            DebugHelper::showScreenMessage("closest node found", FColor::Green);
-            p->draw(closestNode->pos);
-        }else{
-            FString issueString = "Issue, neightbor count";
-            issueString += FString::Printf(TEXT(" %d"), (int)nodes.size());
-            DebugHelper::showScreenMessage(issueString, FColor::Red);
-        }
-
-        return closestNode;
     }
+    if(PathFinder::PREBUILD_EDGES_ENABLED && closestNode == nullptr){
+        DebugHelper::showScreenMessage("ASYNC LATE CONNECT NODE ", FColor::Yellow);
+        return lateadd(pos);
+    }
+
+    return closestNode;
+
 
     
 }
+
+
+PathFinder::Node* PathFinder::Chunk::lateadd(FVector pos){
+    PathFinder::Node *s = new PathFinder::Node(pos);
+    nodes.push_back(s);
+    if(PathFinder::PREBUILD_EDGES_ENABLED){
+        PathFinder *p = PathFinder::instance();
+        if(s != nullptr && p != nullptr){
+            p->connect(s);
+        }
+    }
+    return s;
+}
+
 
 
 
@@ -1254,6 +1212,8 @@ void PathFinder::connect(Node *node){
 
         std::vector<Node *> enclosedByMaxDistance = getSubGraph(a, b);
 
+        DebugHelper::showScreenMessage("try connect start", FColor::Red);
+
         for (int i = 0; i < enclosedByMaxDistance.size(); i++){
             Node *compare = enclosedByMaxDistance.at(i);
             if(compare != nullptr && compare != node){
@@ -1300,6 +1260,8 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
         }
 
         if(worldPointer){
+            DebugHelper::showScreenMessage("async connect start", FColor::Red);
+
             FHitResult HitResult;
             FCollisionQueryParams Params;
 
@@ -1356,7 +1318,7 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
     if(a != nullptr && b != nullptr){
         FScopeLock Lock(&delegate_CriticalSection_a);
 
-        FTraceDelegate *delegate  = nullptr;
+        FTraceDelegate *delegate = nullptr;
         if (released.size() > 0)
         {
             delegate = released.back();
@@ -1391,12 +1353,13 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
 
                     DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
 
-                    if(this->worldPointer && false){
+                    if(this->worldPointer ){
                         DebugHelper::showLineBetween(
                             worldPointer,
                             a->pos,
                             b->pos,
-                            FColor::Blue
+                            FColor::Blue,
+                            1.0f
                         );
                     }
                 }
@@ -1639,7 +1602,7 @@ bool PathFinder::passTangentailCheck(Node *a, Node *b){
             return dirAB_ok && dirBA_ok;
         }
 
-        if(worldPointer){
+        if(worldPointer && false){
             DebugHelper::showLineBetween(worldPointer, a->pos, b->pos, FColor::Yellow, 100.0f);
         }
         return true; //if is not part of a convexx hull, true by default
