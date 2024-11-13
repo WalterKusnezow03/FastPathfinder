@@ -288,10 +288,8 @@ void PathFinder::addConvexHull(std::vector<FVector> &vec){
 void PathFinder::addNewNode(FVector a){
     PathFinder::Quadrant *q = askforQuadrant(a.X, a.Y);
     if(q != nullptr){
+        //FScopeLock Lock(&delegate_CriticalSection_a); //new lock added
         q->add(a);
-        
-        
-        
     }
 }
 
@@ -300,6 +298,7 @@ void PathFinder::addNode(Node * node){
         FVector posCopy = node->pos;
         PathFinder::Quadrant *q = askforQuadrant(posCopy.X, posCopy.Y);
         if(q != nullptr){
+            //FScopeLock Lock(&delegate_CriticalSection_a); //new lock added
             q->add(node);
         }
     }
@@ -764,7 +763,8 @@ void PathFinder::Quadrant::add(FVector n){
     //std::abs for flipping negatives obviosuly
     int x = std::abs(n.X / CHUNKSIZE); //create new chunks?
     int y = std::abs(n.Y / CHUNKSIZE);
-
+    
+    /*
     while(map.size() <= x) {
         map.push_back(std::vector<PathFinder::Chunk * >());
     }
@@ -774,7 +774,8 @@ void PathFinder::Quadrant::add(FVector n){
         while (map[i].size() <= y) {
             map[i].push_back(new PathFinder::Chunk());
         }
-    }
+    }*/
+    fillMapTo(x, y);
 
     // Add the node to the appropriate chunk
     map[x][y]->add(n);   
@@ -788,7 +789,7 @@ void PathFinder::Quadrant::add(Node *n){
         //std::abs for flipping negatives obviosuly
         int x = std::abs(n->pos.X / CHUNKSIZE); //create new chunks?
         int y = std::abs(n->pos.Y / CHUNKSIZE);
-
+        /*
         while(map.size() <= x) {
             map.push_back(std::vector<PathFinder::Chunk * >());
         }
@@ -798,12 +799,34 @@ void PathFinder::Quadrant::add(Node *n){
             while (map[i].size() <= y) {
                 map[i].push_back(new PathFinder::Chunk());
             }
-        }
+        }*/
+        fillMapTo(x, y);
 
         // Add the node to the appropriate chunk
         map[x][y]->add(n);
     }   
 }
+
+/** 
+ * TESTING NEEDED!
+*/
+void PathFinder::Quadrant::fillMapTo(int xIndex, int yIndex){
+    PathFinder *instance = PathFinder::instance();
+    if(instance != nullptr){
+        FScopeLock Lock(&instance->delegate_CriticalSection_a); //new lock added from oath finder instance 
+        while(map.size() <= xIndex) {
+            map.push_back(std::vector<PathFinder::Chunk * >());
+        }
+
+        // Ensure all lists up to map.Count have enough chunks
+        for (int i = 0; i < map.size(); i++) {
+            while (map[i].size() <= yIndex) {
+                map[i].push_back(new PathFinder::Chunk());
+            }
+        }
+    }
+}
+
 
 
 
@@ -1206,7 +1229,7 @@ void PathFinder::connect(Node *node){
 
         std::vector<Node *> enclosedByMaxDistance = getSubGraph(a, b);
 
-        DebugHelper::showScreenMessage("try connect start", FColor::Red);
+
 
         for (int i = 0; i < enclosedByMaxDistance.size(); i++){
             Node *compare = enclosedByMaxDistance.at(i);
@@ -1254,7 +1277,6 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
         }
 
         if(worldPointer){
-            DebugHelper::showScreenMessage("async connect start", FColor::Red);
 
             FHitResult HitResult;
             FCollisionQueryParams Params;
@@ -1377,7 +1399,7 @@ void PathFinder::freeDelegate(FTraceDelegate *d){
     if(d != nullptr){
 
         d->Unbind();
-        FScopeLock Lock(&delegate_CriticalSection_a);
+        FScopeLock Lock(&delegate_CriticalSection_b);
         released.push_back(d);
     }
 }
