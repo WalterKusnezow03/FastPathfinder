@@ -12,7 +12,8 @@ priorityQueue::~priorityQueue()
 {
 }
 
-
+/// @brief will freshly add a node OR bubble up the node if existent!
+/// @param node node to add or refresh
 void priorityQueue::add(PathFinder::Node *node){
     if(node != nullptr){
         //(am letzten index einfügen, bubble up)
@@ -122,9 +123,8 @@ void priorityQueue::downheap(){
         left = 1 + (parentIndex * 2);
         right = left + 1;
 
-        if(
-            parentIndex >= nodes.size() || left >= nodes.size()
-        ){
+        //index out of bounds
+        if(parentIndex >= nodes.size() || left >= nodes.size()){
             return;
         }
 
@@ -135,11 +135,12 @@ void priorityQueue::downheap(){
         int lowerIndex = left;
         if (right < nodes.size()) //if right exists
         {
+            //better fx child
             lowerIndex = nodes.at(left)->fx < nodes.at(right)->fx ? left : right;
         }
 
         //check the lower to get up
-        //parent is larger than smaller child
+        //parent fx is larger than smaller childs fx
         if(nodes.at(parentIndex)->fx > nodes.at(lowerIndex)->fx){
             //swap
             PathFinder::Node *parentCopy = nodes.at(parentIndex);

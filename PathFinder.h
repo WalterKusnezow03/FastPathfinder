@@ -114,6 +114,8 @@ private:
 
 	class Chunk{
 		public:
+			/// @brief is a vector of pointers in case the vector is copied internally
+			/// and nodes must stay active while path finding
 			std::vector<PathFinder::Node*> nodes;
 			Chunk();
 			~Chunk();
@@ -193,7 +195,10 @@ private:
 
 	int traceCount;
 
-	static constexpr bool PREBUILD_EDGES_ENABLED = true; //enable disable!
+	/// @brief will tell whether the graph is build if nodes are added at any time
+	static constexpr bool PREBUILD_EDGES_ENABLED = true;
+
+	/// @brief will tell whether the raycast for adding nodes will be async or an synchron operation
 	static constexpr bool ASYNC_EDGE_PREBUILDING = true;
 	static constexpr int PREBUILD_MAXDISTANCE = 5000; // 10000 / 100 = 100 meter, keep to 50.
 	void connect(PathFinder::Node *node);
@@ -225,7 +230,7 @@ private:
 	*/
 
 	FCriticalSection fillQuadrant_CriticalSection;
-	FCriticalSection delegate_CriticalSection_a;
+	FCriticalSection delegate_CriticalSection_a; 
 	FCriticalSection delegate_CriticalSection_b;
 	
 	std::vector<FTraceDelegate *> released;
