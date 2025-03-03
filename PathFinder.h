@@ -29,7 +29,8 @@ public:
 	static const bool debugDrawNodes = true; //false
 
 	~PathFinder();
-	
+
+	FCollisionQueryParams collsionParamsLowDetailAndFast();
 
 	static PathFinder *instance(UWorld *worldIn);
 	static PathFinder *instance();

@@ -692,7 +692,8 @@ bool PathFinder::canSeeTangential(PathFinder::Node *A, PathFinder::Node*B){
 bool PathFinder::canSee(FVector &Start, FVector &End){
     if(worldPointer){
         FHitResult HitResult;
-		FCollisionQueryParams Params;
+        FCollisionQueryParams Params = collsionParamsLowDetailAndFast();
+        //Params.bTraceComplex = false; // HIER LOWER RAYCAST DETAIL-> FASTER
 
         //add params from entity manager (contains all bots for example, which can be ignored)
         //part of a bigger context im working on, comment out or provide your own params
@@ -1288,7 +1289,7 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
         if(worldPointer){
 
             FHitResult HitResult;
-            FCollisionQueryParams Params;
+            FCollisionQueryParams Params = collsionParamsLowDetailAndFast();
 
             //add params from entity manager (contains all bots for example, which can be ignored)
             //part of a bigger context im working on, comment out or provide your own params
@@ -1655,12 +1656,13 @@ bool PathFinder::passTangentailCheck(Node *a, Node *b){
 }
 
 
-
-
-
-
-
-
+/// @brief collision params with trace complex false: Faster
+/// @return 
+FCollisionQueryParams PathFinder::collsionParamsLowDetailAndFast(){
+    FCollisionQueryParams params;
+    params.bTraceComplex = false;
+    return params;
+};
 
 /**
  * 
