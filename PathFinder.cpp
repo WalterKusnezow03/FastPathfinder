@@ -13,6 +13,7 @@
 #include <limits>
 #include "priorityList.h"
 #include "p2/pathFinding/priorityQueue.h"
+#include "p2/pathFinding/raycastTasks/raycastTask.h"
 
 
 
@@ -204,6 +205,14 @@ void PathFinder::showPos(FVector e, FColor c){
 void PathFinder::addNewNodeVector(std::vector<FVector> &vec, FVector &offset){
     for (int i = 0; i < vec.size(); i++){
         addNewNode(vec.at(i) + offset);
+    }
+}
+
+
+void PathFinder::addNewNodeVector(std::vector<FVector> &vec, std::vector<FVector> &offsets){
+    for (int i = 0; i < offsets.size(); i++){
+        FVector current = offsets[i];
+        addNewNodeVector(vec, current);
     }
 }
 
@@ -1248,7 +1257,12 @@ void PathFinder::connect(Node *node){
                 if(PathFinder *p = PathFinder::instance()){
 
                     if(PathFinder::ASYNC_EDGE_PREBUILDING){
+                        //OLD ASYNC TRACE:
                         asyncCanSee(node, enclosedByMaxDistance.at(i));
+
+                        //Sync raycast trace, works worse than async
+                        //ddNewRaytask(node, enclosedByMaxDistance.at(i));
+
                     }else{
                         
                         if (p->canSeeTangential(node, enclosedByMaxDistance.at(i))) 
@@ -1296,7 +1310,8 @@ void PathFinder::asyncCanSee(Node *a, Node *b){
             if(EntityManager *e = worldLevel::entityManager()){
                 Params = e->getIgnoredRaycastParams();
             }
-            
+            Params.bTraceComplex = false;
+
             //async cast if prebuild
             if(PREBUILD_EDGES_ENABLED){
 
@@ -1380,7 +1395,7 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
                     b->addTangentialNeighbor(a);
 
                     DebugHelper::showScreenMessage("async trace made new", FColor::Yellow);
-
+                    /*
                     if(this->worldPointer ){
                         DebugHelper::showLineBetween(
                             worldPointer,
@@ -1389,7 +1404,7 @@ FTraceDelegate *PathFinder::requestDelegate(Node *a, Node *b){
                             FColor::Blue,
                             1.0f
                         );
-                    }
+                    }*/
                 }
 
                 
@@ -1782,3 +1797,41 @@ std::vector<FVector> PathFinder::ConvexPolygon::findFastPathOnHull(Node* a, Node
 
 }
 */
+
+
+
+
+/**
+ * 
+ * 
+ * ----- TICKED SYNCHORNONIZED CONNECTOR, WORKS WORSE THAN ASYNC TRACE, DO NOT USE ------
+ * 
+ * 
+ */
+void PathFinder::Tick(){
+    return;
+    int tasksPerTick = 10000;
+
+    for (int i = 0; i < tasksPerTick; i++){
+        if(rayTasksVec.size() > 0){
+            raycastTask &current = rayTasksVec.back();
+            current.execute();
+            rayTasksVec.pop_back();
+
+            if(i == tasksPerTick-1){
+                DebugHelper::showScreenMessage("NEW SYNC TRACE!",rayTasksVec.size(), FColor::Orange);
+            }
+            
+        }
+    }
+
+}
+
+void PathFinder::addNewRaytask(Node *a, Node *b){
+    return;
+    if(a != nullptr && b != nullptr){
+        raycastTask newTask;
+        newTask.setup(worldPointer, a, b);
+        rayTasksVec.push_back(newTask);
+    }
+}
