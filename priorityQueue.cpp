@@ -2,6 +2,8 @@
 
 
 #include "p2/pathFinding/PathFinder.h"
+#include <map>
+#include "p2/DebugHelper.h"
 #include "priorityQueue.h"
 
 priorityQueue::priorityQueue()

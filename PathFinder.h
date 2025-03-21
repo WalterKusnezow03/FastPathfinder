@@ -49,6 +49,7 @@ public:
 
 	std::vector<FVector> getPath(FVector a, FVector b);
 
+	FVector findFurthestConnectedNodeFrom(FVector &other);
 
 	class Node
 	{

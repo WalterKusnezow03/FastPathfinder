@@ -82,16 +82,16 @@ bool EdgeCollector::isExcludedType(AActor *actor){
 /// @brief finds all UActorComponents from a given actor
 /// @tparam T UActorComponents or derived, specified by the passed list
 /// @param a actor to get from
-/// @param items container to save in
+/// @param items container to save in, list to prevent useless copying of vector
 template <typename T>
-void EdgeCollector::findAllOfType(AActor &a , std::list<T*> & items)
+void EdgeCollector::findAllOfType(AActor &actor , std::list<T*> & items)
 {
 	//upper type bound must be set inside here if the class is not generic!
 	static_assert(std::is_base_of<UActorComponent, T>::value, "must be UActorComponent component");
 
     //find other actors first and search inside
     TArray<UChildActorComponent *> actors;
-    a.template GetComponents<UChildActorComponent>(actors);
+    actor.template GetComponents<UChildActorComponent>(actors);
     if(actors.Num() > 0){
         for (int i = 0; i < actors.Num(); i++){
             AActor *a1 = actors[i]->GetChildActor(); //gets the aactor of an child actor
@@ -104,7 +104,7 @@ void EdgeCollector::findAllOfType(AActor &a , std::list<T*> & items)
 
     //then layer own
 	TArray<T *> array;
-	a.template GetComponents<T>(array); //only provided by aactor
+	actor.template GetComponents<T>(array); //only provided by aactor
 	if(array.Num() > 0){
 		for (int i = 0; i < array.Num(); i++){
 			items.push_back(array[i]);
@@ -237,15 +237,9 @@ void EdgeCollector::getEdgesFromSingleMesh(
 
         // Iterate through all the vertex buffers
         const FPositionVertexBuffer& PositionVertexBuffer = LODResources.VertexBuffers.PositionVertexBuffer;
-        const FStaticMeshVertexBuffer& StaticMeshVertexBuffer = LODResources.VertexBuffers.StaticMeshVertexBuffer;
+        //const FStaticMeshVertexBuffer& StaticMeshVertexBuffer = LODResources.VertexBuffers.StaticMeshVertexBuffer;
 
-        /*
-        remember:
-        1--2
-        |  |
-        0<-3
-        vertecy anordnung
-        */
+
 
         // Iterate through each vertex
         for (uint32 VertexIndex = 1; VertexIndex < PositionVertexBuffer.GetNumVertices(); VertexIndex++)
@@ -261,7 +255,7 @@ void EdgeCollector::getEdgesFromSingleMesh(
             );
 
             
-            //Wenn vertikale kante: interessiert daran
+            //Wenn vertikale kante: interessiert daran im sichtbarkeits navigations graphen
             if(isVertical(A, B)){
 
                 bool extended = false;

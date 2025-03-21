@@ -1055,13 +1055,15 @@ PathFinder::Node* PathFinder::Chunk::findNode(FVector pos){
         PathFinder::Node *current = nodes.at(i);
         if (current != nullptr)
         {
+            if(current->visible_tangential_Neighbors.size() > 0){ //no neighbors makes no sense.
+                float Difference = FVector::Dist(pos, current->pos);
 
-            float Difference = FVector::Dist(pos, current->pos);
-
-            if(Difference < closest){
-                closest = Difference;
-                closestNode = current;
+                if(Difference < closest){
+                    closest = Difference;
+                    closestNode = current;
+                }
             }
+            
         }
     }
 
@@ -1798,8 +1800,46 @@ std::vector<FVector> PathFinder::ConvexPolygon::findFastPathOnHull(Node* a, Node
 }
 */
 
+// ------ bot helper -------
+FVector PathFinder::findFurthestConnectedNodeFrom(FVector &other){
+    Node *foundTargetNode = findNode(other);
+    if(foundTargetNode != nullptr){
+        std::vector<Node *> &neighborRef = foundTargetNode->visible_tangential_Neighbors;
+        if (neighborRef.size() > 0)
+        {
+            Node *farthest = neighborRef[0];
+            FVector farthestPos;
+            float dist = 99999999;
+            if(farthest != nullptr){
+                dist = FVector::Dist(farthest->pos, foundTargetNode->pos);
+                farthestPos = farthest->pos;
+            }
+            for (int i = 1; i < neighborRef.size(); i++){
+                Node *current = neighborRef[i];
+                if(current != nullptr){
+                    float newdist = FVector::Dist(current->pos, farthestPos);
+                    if(newdist > dist){
+                        dist = newdist;
+                        farthestPos = current->pos;
+                    }
+                }
+            }
 
+            if(worldPointer){
+                DebugHelper::showLineBetween(
+                    worldPointer,
+                    farthestPos,
+                    foundTargetNode->pos,
+                    FColor::Cyan,
+                    2.0f
+                );
+            }
 
+            return farthestPos;
+        }
+    }
+    return other;
+}
 
 /**
  * 
